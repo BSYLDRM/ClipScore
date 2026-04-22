@@ -31,14 +31,16 @@ clipscore/
 │   ├── main.py
 │   ├── requirements.txt
 │   └── .env             ← CLAUDE_API_KEY (git'e commit edilmez)
-└── frontend/            ← React/Vite web arayüzü (test & preview)
-    ├── src/
-    ├── package.json
-    └── .env             ← VITE_BACKEND_URL (git'e commit edilmez)
+└── app/                 ← Android uygulaması (Kotlin + Jetpack Compose)
+    ├── src/main/java/com/example/clipscore/
+    │   ├── MainActivity.kt
+    │   └── ui/theme/
+    ├── build.gradle.kts
+    └── src/main/AndroidManifest.xml
 ```
 
-> NOT: Android kaynak kodu ayrı dizinde tutulur (bu repoda yok).
-> Backend ve Frontend bu repodaki iki bağımsız servistir.
+> Backend ve Android (frontend) iki bağımsız servis/modül olarak geliştirilir.
+> Backend bilgisayarda çalışır, Android emülatör 10.0.2.2:5000 üzerinden bağlanır.
 
 ---
 
@@ -52,12 +54,15 @@ bagimliliklar: flask, flask-cors, requests, python-dotenv
 port: 5000
 ```
 
-### Frontend
+### Frontend (Android)
 ```
-dil: JavaScript/TypeScript
-cerceve: React 18 + Vite
-ui_kutuphanesi: Tailwind CSS
-port: 5173
+dil: Kotlin
+cerceve: Jetpack Compose + Material 3
+mimari: MVVM + StateFlow
+http_istemcisi: Retrofit + OkHttp
+json: Gson
+min_sdk: API 26 (Android 8.0)
+baglanti: http://10.0.2.2:5000 (emülatörden host makineye)
 ```
 
 ---
@@ -70,9 +75,11 @@ CLAUDE_API_KEY=sk-ant-...   # Zorunlu — Anthropic API anahtarı
 PORT=5000                    # Opsiyonel, varsayılan 5000
 ```
 
-### frontend/.env
+### Android (local.properties)
 ```
-VITE_BACKEND_URL=http://localhost:5000   # Backend adresi
+# Android Studio otomatik oluşturur, git'e commit edilmez
+# Backend URL emülatör için sabit: http://10.0.2.2:5000
+# Gerçek cihaz için bilgisayarın local IP'si kullanılır (örn. http://192.168.1.x:5000)
 ```
 
 ---
@@ -188,123 +195,93 @@ kabul_kriteri:
 
 ---
 
-### GOREV_04 — Frontend Proje Kurulumu
+### GOREV_04 — Android Proje Yapılandırması
 
 ```yaml
 id: GOREV_04
-baslik: Vite + React + Tailwind frontend projesini oluştur
+baslik: Android bağımlılıklarını ve izinlerini yapılandır
 on_kosul: []
 dosyalar:
-  - frontend/package.json
-  - frontend/vite.config.js
-  - frontend/tailwind.config.js
-  - frontend/index.html
-  - frontend/src/main.jsx
-  - frontend/src/App.jsx
-  - frontend/.env.example
-  - frontend/.gitignore
+  - app/build.gradle.kts
+  - app/src/main/AndroidManifest.xml
 adimlar:
-  - frontend/ dizini oluştur
-  - package.json oluştur (react, react-dom, vite, tailwindcss, autoprefixer, postcss bağımlılıkları)
-  - vite.config.js oluştur (port 5173, proxy /api → localhost:5000)
-  - tailwind.config.js oluştur (content: src/**/*.{jsx,js})
-  - src/index.css oluştur (Tailwind direktifleri: base, components, utilities)
-  - index.html oluştur (root div, main.jsx bağlantısı)
-  - src/main.jsx oluştur (React render)
-  - src/App.jsx oluştur (temel iskelet — "ClipScore" başlığı, siyah arka plan)
-  - .env.example oluştur (VITE_BACKEND_URL=http://localhost:5000)
-  - .gitignore oluştur (node_modules, .env)
+  - build.gradle.kts'e Retrofit, OkHttp, Gson bağımlılıklarını ekle
+  - build.gradle.kts'e Coroutines bağımlılığını ekle
+  - AndroidManifest.xml'e INTERNET iznini ekle
+  - AndroidManifest.xml'e usesCleartextTraffic=true ekle (emülatör HTTP için)
 kabul_kriteri:
-  - npm install hatasız çalışır
-  - npm run dev port 5173'te çalışır
-  - Tarayıcıda "ClipScore" metni görünür
-  - Tailwind sınıfları çalışır (arka plan rengi uygulanır)
+  - Proje hatasız build alır
+  - Emülatörde internet iznine sahip
+  - HTTP bağlantısına izin verilmiş
 ```
 
 ---
 
-### GOREV_05 — Frontend Bileşen: VideoAnalyzerForm
+### GOREV_05 — Android Backend Bağlantısı (Retrofit)
 
 ```yaml
 id: GOREV_05
-baslik: Video analiz formu bileşenini oluştur
+baslik: Retrofit ile backend API bağlantısını kur
 on_kosul: [GOREV_04]
 dosyalar:
-  - frontend/src/components/VideoAnalyzerForm.jsx
+  - app/src/main/java/com/example/clipscore/MainActivity.kt
 adimlar:
-  - src/components/ dizini oluştur
-  - VideoAnalyzerForm.jsx bileşeni oluştur
-  - title input alanı ekle (max 200 karakter, zorunlu)
-  - description textarea ekle (max 1000 karakter, opsiyonel)
-  - language seçimi ekle (tr/en, varsayılan tr)
-  - "Skoru Hesapla" submit butonu ekle
-  - Form state'ini useState ile yönet
-  - onSubmit prop'u ile üst bileşene veri ilet
-  - Boş title ile gönderide hata mesajı göster
-  - Yükleme durumunda buton disabled ve "Analiz ediliyor..." göster
-  - Tailwind ile stil ver: koyu arka plan (#0A0A0A), mor aksan (#7C3AED)
+  - MessageResponse data class tanımla (message: String)
+  - BackendApi interface tanımla (GET api/message → MessageResponse)
+  - Retrofit instance oluştur (baseUrl: http://10.0.2.2:5000/, GsonConverterFactory)
+  - LaunchScreen composable içinde LaunchedEffect ile getMessage() çağır
+  - Başarıda mesajı ekranda göster, hata durumunda "Bağlantı hatası" göster
 kabul_kriteri:
-  - Form render olur
-  - Boş title ile submit yapılırsa hata gösterilir
-  - Dolu form submit edildiğinde onSubmit çağrılır
-  - Yükleme sırasında buton tıklanamaz
+  - Emülatörde uygulama açılınca backend'den "iyiki varsınız" gelir
+  - Backend kapalıysa "Bağlantı hatası" gösterilir
+  - Coroutine ile async çağrı yapılır (UI donmaz)
 ```
 
 ---
 
-### GOREV_06 — Frontend Bileşen: ScoreDisplay
+### GOREV_06 — Android Tema Güncellemesi
 
 ```yaml
 id: GOREV_06
-baslik: Analiz sonuçlarını gösteren skor ekranı bileşeni
+baslik: ClipScore renk temasını uygula
 on_kosul: [GOREV_04]
 dosyalar:
-  - frontend/src/components/ScoreDisplay.jsx
+  - app/src/main/java/com/example/clipscore/ui/theme/Color.kt
+  - app/src/main/java/com/example/clipscore/ui/theme/Theme.kt
 adimlar:
-  - ScoreDisplay.jsx bileşeni oluştur
-  - prop: analysisResult (vibeScore, hookScore, keywordScore, emotionScore, ctaScore, hooks, description, hashtags)
-  - Ana vibeScore'u büyük ve belirgin göster
-  - Renk kodu uygula: 0-40 kırmızı, 41-70 sarı, 71-100 yeşil
-  - 4 alt kategori skorunu kart olarak listele (Hook, Anahtar Kelime, Duygu, CTA)
-  - hooks listesini göster; her hook için "Kopyala" butonu ekle
-  - Kopyala butonuna tıklanınca clipboard'a kopyala, "Kopyalandı!" göster
-  - description alanını göster, kopyala butonu ekle
-  - hashtags'ı göster (mor renk, tıklanabilir görünüm)
+  - Color.kt'ye ClipScore renklerini ekle
+    (BrandBg=#0A0A0A, BrandPrimary=#7C3AED, BrandSuccess=#22C55E,
+     BrandWarning=#F59E0B, BrandError=#EF4444, BrandText=#F8FAFC)
+  - Theme.kt'de dinamik renk devre dışı bırak (dynamicColor=false)
+  - DarkColorScheme'i ClipScore renkleriyle güncelle
 kabul_kriteri:
-  - vibeScore'a göre renk değişir
-  - 4 kategori skoru görünür
-  - Hook kopyala butonu çalışır (clipboard'a yazar)
-  - Description kopyala butonu çalışır
-  - Hashtag'ler görünür
+  - Uygulama siyah arka plan ile açılır
+  - Mor aksan rengi butonlarda görünür
+  - Dinamik renk (Android 12 Material You) devre dışı
 ```
 
 ---
 
-### GOREV_07 — Frontend API Entegrasyonu
+### GOREV_07 — Android Analyze Endpoint Entegrasyonu
 
 ```yaml
 id: GOREV_07
-baslik: App.jsx'te backend'e API çağrısını entegre et
-on_kosul: [GOREV_05, GOREV_06]
+baslik: POST /api/analyze endpoint'ini Android'e entegre et
+on_kosul: [GOREV_05, GOREV_03]
 dosyalar:
-  - frontend/src/App.jsx
-  - frontend/src/api/analyzeApi.js
+  - app/src/main/java/com/example/clipscore/MainActivity.kt
 adimlar:
-  - src/api/analyzeApi.js oluştur
-  - analyzeVideo(title, description, language) async fonksiyonu yaz
-  - VITE_BACKEND_URL env değişkenini kullan (/api/analyze endpoint)
-  - App.jsx'i güncelle: VideoAnalyzerForm + ScoreDisplay entegre et
-  - useState ile state yönet: {loading, error, result}
-  - Form submit'te analyzeVideo çağır
-  - Yükleme sırasında spinner/mesaj göster
-  - Hata durumunda hata mesajı göster
-  - Başarıda ScoreDisplay render et
+  - AnalyzeRequest data class ekle (title, description, language)
+  - AnalyzeResponse data class ekle (vibeScore, hookScore, keywordScore, emotionScore, ctaScore, hooks, description, hashtags)
+  - BackendApi interface'e POST api/analyze endpoint'i ekle
+  - Basit bir input ekranı (TextField title + description) composable yaz
+  - "Skoru Hesapla" butonu ile analyze çağrısı yap
+  - Sonuçları ekranda göster (vibeScore + hooks listesi)
 kabul_kriteri:
-  - Form doldur + submit → API çağrısı yapılır
-  - Yükleme sırasında loading göstergesi var
-  - Başarılı yanıtta ScoreDisplay render olur
-  - Hata durumunda Türkçe hata mesajı gösterilir
-  - Network hatası (backend çalışmıyor) yakalanır
+  - TextField'lara başlık ve açıklama girilebilir
+  - Butona basınca backend'e POST atılır
+  - vibeScore ve hooks sonuç ekranında görünür
+  - Yükleme sırasında "Analiz ediliyor..." gösterilir
 ```
 
 ---
@@ -355,10 +332,10 @@ kabul_kriteri:
 
 ```
 1. GOREV_01 → GOREV_02 → GOREV_03 → GOREV_08   (Backend akışı)
-2. GOREV_04 → GOREV_05 → GOREV_06 → GOREV_07   (Frontend akışı)
+2. GOREV_04 → GOREV_05 → GOREV_06 → GOREV_07   (Android akışı)
 3. GOREV_09                                      (Dokümantasyon)
 
-Backend ve Frontend paralel geliştirilebilir (GOREV_01-03 ve GOREV_04-06).
+Backend ve Android paralel geliştirilebilir.
 GOREV_07 her iki taraf da hazır olunca yapılır.
 ```
 
@@ -373,17 +350,21 @@ Tüm görevler tamamlandıktan sonra şu manuel testler yapılır:
 curl http://localhost:5000/api/health
 # Beklenen: {"status": "ok", "service": "clipscore-backend"}
 
-# 2. Analiz endpoint testi
+# 2. Mesaj endpoint testi
+curl http://localhost:5000/api/message
+# Beklenen: {"message": "iyiki varsınız"}
+
+# 3. Analiz endpoint testi
 curl -X POST http://localhost:5000/api/analyze \
   -H "Content-Type: application/json" \
   -d '{"title": "Bir günde 10kg verdim!", "description": "Diyet sırlarımı paylaşıyorum", "language": "tr"}'
 # Beklenen: vibeScore, hookScore vb. içeren JSON
 
-# 3. Frontend erişim
-# Tarayıcıda http://localhost:5173 aç
-# Form görünmeli, doldur, submit et, skor gelmeli
+# 4. Android emülatör testi
+# Android Studio'da emülatörü başlat
+# Uygulamayı çalıştır → backend'den "iyiki varsınız" gelmeli
 
-# 4. Hata senaryoları
+# 5. Hata senaryosu
 curl -X POST http://localhost:5000/api/analyze \
   -H "Content-Type: application/json" \
   -d '{"title": "", "description": ""}'
@@ -395,9 +376,10 @@ curl -X POST http://localhost:5000/api/analyze \
 ## SINIRLAMALAR_VE_NOTLAR
 
 ```
-- Bu PLANNING.md Android Kotlin kodunu kapsamaz (ayrı scope)
-- Backend Python/Flask kullanır (PLANNING.md'deki Node.js planı güncellendi)
-- Frontend web arayüzü test/preview amaçlıdır, production Android app ayrıdır
+- Backend Python/Flask kullanır
+- Frontend Android Kotlin + Jetpack Compose'dur 
+- Emülatör backend'e 10.0.2.2:5000 üzerinden bağlanır 
+- Gerçek fiziksel cihaz için bilgisayarın yerel IP'si kullanılmalıdır
 - Claude API key .env'de tutulur, asla kaynak koda yazılmaz
 - Rate limiting in-memory'dir; production'da Redis önerilir
 - MVP sonrası geçmiş kaydetme Room DB ile Android'de yapılacak
