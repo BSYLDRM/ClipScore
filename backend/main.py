@@ -92,10 +92,14 @@ def analyze():
         'JSON formatı:\n{"vibeScore": <0-100>, "hookScore": <0-100>, "keywordScore": <0-100>, "emotionScore": <0-100>, "ctaScore": <0-100>, "hooks": ["hook1", "hook2", "hook3"], "description": "<SEO açıklama>", "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]}'
     )
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1000},
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 2000,
+            "thinkingConfig": {"thinkingBudget": 0}
+        },
     }
 
     try:
