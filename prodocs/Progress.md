@@ -23,8 +23,8 @@
 - [x] Hilt DI kurulumu
 - [x] Backend deploy (Render.com)
 - [x] Zorunlu GitHub dokümanları
-- [x] Backend Render.com'a deploy edildi
-- [x] /api/health endpoint'i production'da 200 döndürüyor
+- [ ] Backend Render.com'a deploy edildi (render.yaml + Procfile hazır; GitHub push gerekli)
+- [ ] /api/health endpoint'i production'da 200 döndürüyor
 
 ## Alınan Kararlar
 - Gemini 2.5 Flash seçildi: Claude API key yönetimi backend'de tutuldu, Android'e açılmadı
