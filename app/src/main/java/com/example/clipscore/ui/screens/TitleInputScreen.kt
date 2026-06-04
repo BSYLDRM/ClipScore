@@ -26,12 +26,16 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -40,6 +44,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.clipscore.ui.components.ClipScoreButton
 import com.example.clipscore.ui.theme.BrandBg
 import com.example.clipscore.ui.theme.BrandBorder
@@ -48,10 +53,13 @@ import com.example.clipscore.ui.theme.BrandSurface
 import com.example.clipscore.ui.theme.BrandText
 import com.example.clipscore.ui.theme.Montserrat
 import com.example.clipscore.ui.theme.Nunito
+import com.example.clipscore.ui.viewmodel.AnalyzeUiState
+import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TitleInputScreen(
+    viewModel: AnalyzeViewModel,
     onBack: () -> Unit,
     onCalculate: () -> Unit,
     modifier: Modifier = Modifier,
@@ -60,9 +68,30 @@ fun TitleInputScreen(
     var description by rememberSaveable { mutableStateOf("") }
     var selectedLanguage by rememberSaveable { mutableStateOf("tr") }
 
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.resetState()
+    }
+
+    LaunchedEffect(uiState) {
+        when (val state = uiState) {
+            is AnalyzeUiState.Success -> onCalculate()
+            is AnalyzeUiState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                viewModel.resetState()
+            }
+            else -> Unit
+        }
+    }
+
+    val isLoading = uiState is AnalyzeUiState.Loading
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = BrandBg,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -110,7 +139,7 @@ fun TitleInputScreen(
             )
 
             LabeledField(
-                label = "Açıklama (opsiyonel)",
+                label = "Açıklama",
                 value = description,
                 onValueChange = { if (it.length <= 1000) description = it },
                 placeholder = "Videonuzun içeriğini kısaca anlatın...",
@@ -143,8 +172,11 @@ fun TitleInputScreen(
             Spacer(modifier = Modifier.height(6.dp))
             ClipScoreButton(
                 text = "\uD83D\uDE80 Skoru Hesapla",
-                enabled = title.isNotBlank(),
-                onClick = onCalculate,
+                enabled = title.isNotBlank() && description.isNotBlank(),
+                isLoading = isLoading,
+                onClick = {
+                    viewModel.analyze(title, description, selectedLanguage)
+                },
             )
         }
     }
@@ -234,4 +266,3 @@ private fun LanguageToggle(
         }
     }
 }
-

@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,25 +33,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.clipscore.ui.theme.BrandBg
 import com.example.clipscore.ui.theme.BrandPrimary
 import com.example.clipscore.ui.theme.BrandText
 import com.example.clipscore.ui.theme.Montserrat
 import com.example.clipscore.ui.theme.Nunito
+import com.example.clipscore.ui.viewmodel.AnalyzeUiState
+import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
 import kotlinx.coroutines.delay
 
 @Composable
 fun LoadingScreen(
+    viewModel: AnalyzeViewModel,
     onCancel: () -> Unit,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     val subtitles = remember {
         listOf(
             "Hook'lar analiz ediliyor...",
@@ -62,12 +70,21 @@ fun LoadingScreen(
     var idx by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < 3000) {
+        while (true) {
             delay(1500)
             idx = (idx + 1) % subtitles.size
         }
-        onFinished()
+    }
+
+    LaunchedEffect(uiState) {
+        when (val state = uiState) {
+            is AnalyzeUiState.Success -> onFinished()
+            is AnalyzeUiState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                onCancel()
+            }
+            else -> Unit
+        }
     }
 
     val infinite = rememberInfiniteTransition(label = "pulse")
@@ -81,66 +98,72 @@ fun LoadingScreen(
         label = "pulseScale",
     )
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(BrandBg)
-            .padding(horizontal = 24.dp),
-    ) {
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(180.dp)
-                    .graphicsLayer(scaleX = scale, scaleY = scale)
-                    .background(BrandPrimary.copy(alpha = 0.3f), shape = CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = BrandPrimary,
-                    modifier = Modifier.size(64.dp),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "AI Analiz Ediyor...",
-                fontFamily = Montserrat,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                color = BrandText,
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            AnimatedContent(
-                targetState = subtitles[idx],
-                label = "subtitle",
-            ) { text ->
-                Text(
-                    text = text,
-                    fontFamily = Nunito,
-                    fontSize = 14.sp,
-                    color = BrandText.copy(alpha = 0.75f),
-                )
-            }
-        }
-
-        TextButton(
-            onClick = onCancel,
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = BrandBg,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 18.dp),
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(BrandBg)
+                .padding(horizontal = 24.dp),
         ) {
-            Text(
-                text = "İptal",
-                fontFamily = Nunito,
-                color = Color.White.copy(alpha = 0.9f),
-            )
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .graphicsLayer(scaleX = scale, scaleY = scale)
+                        .background(BrandPrimary.copy(alpha = 0.3f), shape = CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = BrandPrimary,
+                        modifier = Modifier.size(64.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "AI Analiz Ediyor...",
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = BrandText,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                AnimatedContent(
+                    targetState = subtitles[idx],
+                    label = "subtitle",
+                ) { text ->
+                    Text(
+                        text = text,
+                        fontFamily = Nunito,
+                        fontSize = 14.sp,
+                        color = BrandText.copy(alpha = 0.75f),
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = onCancel,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 18.dp),
+            ) {
+                Text(
+                    text = "İptal",
+                    fontFamily = Nunito,
+                    color = Color.White.copy(alpha = 0.9f),
+                )
+            }
         }
     }
 }
-

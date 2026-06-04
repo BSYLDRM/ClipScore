@@ -1,6 +1,8 @@
 package com.example.clipscore.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -11,6 +13,7 @@ import com.example.clipscore.ui.screens.ResultScreen
 import com.example.clipscore.ui.screens.SplashScreen
 import com.example.clipscore.ui.screens.TitleInputScreen
 import com.example.clipscore.ui.screens.VideoPreviewScreen
+import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
 
 object Routes {
     const val Splash = "splash"
@@ -61,13 +64,23 @@ fun NavGraph() {
             )
         }
         composable(Routes.Input) {
+            val parentEntry = remember(navController) {
+                navController.getBackStackEntry(Routes.Home)
+            }
+            val viewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
             TitleInputScreen(
+                viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onCalculate = { navController.navigate(Routes.Loading) },
             )
         }
         composable(Routes.Loading) {
+            val parentEntry = remember(navController) {
+                navController.getBackStackEntry(Routes.Home)
+            }
+            val viewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
             LoadingScreen(
+                viewModel = viewModel,
                 onCancel = { navController.popBackStack() },
                 onFinished = {
                     navController.navigate(Routes.Result) {
@@ -88,4 +101,3 @@ fun NavGraph() {
         }
     }
 }
-
