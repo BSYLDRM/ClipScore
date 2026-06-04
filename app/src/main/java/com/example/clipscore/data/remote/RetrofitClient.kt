@@ -10,7 +10,7 @@ object RetrofitClient {
     private val BASE_URL = if (BuildConfig.DEBUG) {
         "http://10.0.2.2:5000/"
     } else {
-        BuildConfig.BACKEND_URL
+        "https://clipscore-ph79.onrender.com/"
     }
 
     private val gson: Gson = GsonBuilder().create()

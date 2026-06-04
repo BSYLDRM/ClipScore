@@ -42,13 +42,13 @@ python main.py
    ```
    Production release build için:
    ```
-   BACKEND_URL=https://clipscore-backend.onrender.com/
+   BACKEND_URL=https://clipscore-ph79.onrender.com/
    ```
 3. Run → Run 'app'
 
 ## Deploy
 
-Backend Render.com'a deploy edilmiştir: `https://clipscore-backend.onrender.com`
+Backend Render.com'a deploy edilmiştir: `https://clipscore-ph79.onrender.com`
 
 ## .env.example
 ```

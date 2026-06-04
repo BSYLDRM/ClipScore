@@ -31,7 +31,7 @@ android {
         }
         val backendUrl = localProperties.getProperty(
             "BACKEND_URL",
-            "https://clipscore-backend.onrender.com/",
+            "https://clipscore-ph79.onrender.com/",
         )
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
