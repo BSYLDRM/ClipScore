@@ -35,7 +35,7 @@ Video yükle → Platform seç → AI viral potansiyelini 0-100 arası puanlar �
       <br/><b>Giriş Yap</b>
     </td>
     <td align="center">
-      <img src="prodocs/screenshots/Screenshot_20260613_164347.png" width="200"/>
+      <img src="prodocs/screenshots/Screenshot_20260613_131049.png" width="200"/>
       <br/><b>Kayıt Ol</b>
     </td>
   </tr>
