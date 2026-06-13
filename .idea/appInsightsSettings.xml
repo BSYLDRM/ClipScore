@@ -22,10 +22,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.example.clipscore" />
+                  <option name="mobileSdkAppId" value="1:171143139929:android:a7164987707e6175185748" />
+                  <option name="projectId" value="clipscore-b2708" />
+                  <option name="projectNumber" value="171143139929" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

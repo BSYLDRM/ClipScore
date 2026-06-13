@@ -69,6 +69,7 @@ import com.example.clipscore.ui.theme.Montserrat
 import com.example.clipscore.ui.theme.Nunito
 import com.example.clipscore.ui.viewmodel.AnalyzeUiState
 import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
+import com.example.clipscore.util.SnackbarManager
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,19 +84,17 @@ fun ResultScreen(
     val uiState by viewModel.uiState.collectAsState()
     val response = (uiState as? AnalyzeUiState.Success)?.result
 
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     fun copyToClipboard(text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("clipscore", text))
-        scope.launch { snackbarHostState.showSnackbar("Kopyalandı!") }
+        SnackbarManager.showSuccess("Kopyalandı!")
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = BrandBg,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {

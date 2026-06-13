@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
@@ -46,7 +46,6 @@ import com.example.clipscore.ui.theme.BrandBg
 import com.example.clipscore.ui.theme.BrandBorder
 import com.example.clipscore.ui.theme.BrandSurface
 import com.example.clipscore.ui.theme.BrandText
-import com.example.clipscore.ui.theme.BrandWarning
 import com.example.clipscore.ui.theme.Montserrat
 import com.example.clipscore.ui.theme.Nunito
 import com.example.clipscore.data.model.Platform
@@ -61,7 +60,6 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onAnalyzeClick: () -> Unit,
-    onOpenLastAnalysis: () -> Unit,
     onLogout: () -> Unit,
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -199,93 +197,34 @@ fun HomeScreen(
                     }
                 }
             } else {
-                Text(
-                    text = "Son Analiz",
-                    fontFamily = Montserrat,
-                    fontWeight = FontWeight.Bold,
-                    color = BrandText,
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LastAnalysisCard(onClick = onOpenLastAnalysis)
-            }
-        }
-    }
-}
-
-@Composable
-private fun LastAnalysisCard(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = BrandSurface),
-        border = BorderStroke(1.dp, BrandBorder),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Bir günde 10kg verdim şok sonuçlar",
-                        fontFamily = Nunito,
-                        color = BrandText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 2,
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "2 saat önce",
-                        fontFamily = Nunito,
-                        color = BrandText.copy(alpha = 0.6f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "🎬",
+                            style = MaterialTheme.typography.displayMedium
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Henüz analiz yapılmadı",
+                            color = Color(0xFF888888),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "İlk analizini yapmak için butona bas!",
+                            color = Color(0xFF555555),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                VibeBadge(score = 73)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip(text = "YouTube Shorts")
             }
         }
     }
 }
-
-@Composable
-private fun VibeBadge(score: Int) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = BrandWarning.copy(alpha = 0.15f)),
-        border = BorderStroke(1.dp, BrandWarning.copy(alpha = 0.6f)),
-    ) {
-        Text(
-            text = score.toString(),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            fontFamily = Montserrat,
-            fontWeight = FontWeight.ExtraBold,
-            color = BrandWarning,
-            fontSize = 18.sp,
-        )
-    }
-}
-
-@Composable
-private fun Chip(text: String) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = BrandBg),
-        border = BorderStroke(1.dp, BrandBorder),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            fontFamily = Nunito,
-            color = BrandText.copy(alpha = 0.85f),
-            style = MaterialTheme.typography.labelMedium,
-        )
-    }
-}
-

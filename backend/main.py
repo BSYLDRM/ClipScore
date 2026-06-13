@@ -2,8 +2,10 @@ import json
 import os
 import time
 import threading
+import traceback
 
 import requests
+import anthropic
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -12,6 +14,12 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app, origins=["*"])
+
+# Claude Client Initialization
+client = anthropic.Anthropic(
+    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+    timeout=100.0  # 100 saniye timeout
+)
 
 request_counts = {}
 
@@ -60,26 +68,23 @@ def analyze():
             429,
         )
 
-    data = request.get_json(silent=True)
-    if data is None:
-        data = {}
+    try:
+        data = request.get_json(silent=True)
+        if data is None:
+            data = {}
 
-    title = data.get("title", "")
-    description = data.get("description", "")
-    language = data.get("language", "tr")
-    platform = data.get("platform", "TikTok")
+        title = data.get("title", "")
+        description = data.get("description", "")
+        language = data.get("language", "tr")
+        platform = data.get("platform", "TikTok")
 
-    title_str = str(title).strip() if title is not None else ""
-    desc_str = str(description).strip() if description is not None else ""
+        title_str = str(title).strip() if title is not None else ""
+        desc_str = str(description).strip() if description is not None else ""
 
-    if not title_str or not desc_str:
-        return jsonify({"error": "Başlık ve açıklama zorunludur"}), 400
+        if not title_str or not desc_str:
+            return jsonify({"error": "Başlık ve açıklama zorunludur"}), 400
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return jsonify({"error": "API anahtarı yapılandırılmamış"}), 500
-
-    prompt = f"""
+        prompt = f"""
 Sen bir viral sosyal medya içerik uzmanısın.
 Aşağıdaki {platform} içeriğini analiz et ve SADECE JSON döndür.
 
@@ -108,46 +113,38 @@ SADECE şu JSON formatında yanıt ver:
 }}
 """
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 2000,
-        },
-    }
-
-    try:
-        resp = requests.post(
-            url,
-            headers={
-                "content-type": "application/json",
-                "x-goog-api-key": api_key,
-            },
-            json=payload,
-            timeout=60,
+        # Claude API call
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1000,
+            timeout=100.0,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
         )
-        if resp.status_code != 200:
-            return jsonify({"error": "Gemini API hatası", "detail": resp.text}), 502
 
-        data_json = resp.json()
-        raw_text = data_json["candidates"][0]["content"]["parts"][0]["text"]
+        raw_text = message.content[0].text
         cleaned = _strip_markdown_fences(raw_text)
         result = json.loads(cleaned)
         return jsonify(result), 200
+
     except Exception as e:
-        print("HATA:", str(e))
-        return jsonify({"error": "Analiz sırasında bir hata oluştu", "detail": str(e)}), 500
+        print(f"HATA: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 
 def keep_alive():
     while True:
         try:
-            url = os.environ.get("RENDER_EXTERNAL_URL", "https://clipscore-dmmb.onrender.com")
-            requests.get(f"{url}/api/health")
+            url = os.environ.get(
+                "RENDER_EXTERNAL_URL",
+                "https://clipscore-dmmb.onrender.com"
+            )
+            requests.get(f"{url}/api/health", timeout=10)
         except:
             pass
-        time.sleep(840)  # 14 dakikada bir ping at
+        time.sleep(840)
 
 
 if __name__ == "__main__":

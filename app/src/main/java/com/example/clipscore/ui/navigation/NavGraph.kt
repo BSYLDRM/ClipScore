@@ -2,6 +2,7 @@ package com.example.clipscore.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
@@ -20,8 +21,20 @@ import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
 import com.example.clipscore.ui.viewmodel.AuthViewModel
 import com.example.clipscore.ui.viewmodel.VideoPickerViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.clipscore.util.AuthPreferences
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.clipscore.ui.components.ClipScoreSnackbarHost
+import com.example.clipscore.util.SnackbarManager
+import com.example.clipscore.util.SnackbarType
+import kotlinx.coroutines.launch
 
 object Routes {
     const val Splash = "splash"
@@ -39,128 +52,157 @@ fun NavGraph() {
     val context = LocalContext.current
     val authPreferences = remember { AuthPreferences(context) }
     val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
     val startDestination = if (isLoggedIn) Routes.Home else Routes.Auth
 
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-    ) {
-        composable(Routes.Splash) {
-            SplashScreen(
-                onFinished = {
-                    navController.navigate(Routes.Auth) {
-                        popUpTo(Routes.Splash) { inclusive = true }
+    LaunchedEffect(Unit) {
+        SnackbarManager.messages.collect { snackbarMessage ->
+            scope.launch {
+                val prefix = when (snackbarMessage.type) {
+                    SnackbarType.SUCCESS -> "SUCCESS: "
+                    SnackbarType.ERROR -> "ERROR: "
+                    SnackbarType.WARNING -> "WARNING: "
+                    SnackbarType.INFO -> ""
+                }
+                snackbarHostState.showSnackbar(
+                    message = "$prefix${snackbarMessage.message}",
+                    actionLabel = snackbarMessage.actionLabel,
+                    duration = when (snackbarMessage.type) {
+                        SnackbarType.ERROR -> SnackbarDuration.Long
+                        else -> SnackbarDuration.Short
                     }
-                },
-            )
-        }
-        composable(Routes.Auth) {
-            val authViewModel: AuthViewModel = hiltViewModel()
-            AuthScreen(
-                viewModel = authViewModel,
-                navController = navController,
-                onAuthed = { email ->
-                    authPreferences.saveSession(email)
-                },
-            )
-        }
-        composable(Routes.Home) {
-            HomeScreen(
-                onAnalyzeClick = { navController.navigate(Routes.VideoPicker) },
-                onOpenLastAnalysis = { navController.navigate(Routes.Result) },
-                onLogout = {
-                    navController.navigate(Routes.Auth) {
-                        popUpTo(Routes.Home) { inclusive = true }
-                    }
-                },
-                navController = navController
-            )
-        }
-        composable(Routes.VideoPicker) {
-            val parentEntry = remember(it) {
-                navController.getBackStackEntry(Routes.Home)
+                )
             }
-            val videoViewModel: VideoPickerViewModel = hiltViewModel(parentEntry)
-            VideoPickerScreen(
-                viewModel = videoViewModel,
-                onBack = { navController.popBackStack() },
-                onVideoReady = {
-                    navController.navigate(Routes.Preview)
-                },
-            )
         }
-        composable(Routes.Preview) {
-            val parentEntry = remember(it) {
-                navController.getBackStackEntry(Routes.Home)
+    }
+
+    Scaffold(
+        snackbarHost = {
+            ClipScoreSnackbarHost(hostState = snackbarHostState)
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Routes.Splash) {
+                SplashScreen(
+                    onFinished = {
+                        navController.navigate(Routes.Auth) {
+                            popUpTo(Routes.Splash) { inclusive = true }
+                        }
+                    },
+                )
             }
-            val videoViewModel: VideoPickerViewModel = hiltViewModel(parentEntry)
-            val analyzeViewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
-            VideoPreviewScreen(
-                viewModel = videoViewModel,
-                onBack = { navController.popBackStack() },
-                onContinue = {
-                    analyzeViewModel.setVideoContext(videoViewModel.getVideoContext())
-                    navController.navigate(Routes.Input)
-                },
-                onPickDifferent = {
-                    videoViewModel.clearSelection()
-                    navController.navigate(Routes.VideoPicker) {
-                        popUpTo(Routes.VideoPicker) { inclusive = true }
-                    }
-                },
-            )
-        }
-        composable(Routes.Input) {
-            val viewModel: AnalyzeViewModel = hiltViewModel()
-            TitleInputScreen(
-                viewModel = viewModel,
-                navController = navController,
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(Routes.Loading) {
-            val parentEntry = remember(it) {
-                navController.getBackStackEntry(Routes.Home)
+            composable(Routes.Auth) {
+                val authViewModel: AuthViewModel = hiltViewModel()
+                AuthScreen(
+                    viewModel = authViewModel,
+                    navController = navController,
+                    onAuthed = { email ->
+                        authPreferences.saveSession(email)
+                    },
+                )
             }
-            val viewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
-            LoadingScreen(
-                viewModel = viewModel,
-                onCancel = { navController.popBackStack() },
-                onFinished = {
-                    navController.navigate(Routes.Result) {
-                        popUpTo(Routes.Loading) { inclusive = true }
-                    }
-                },
-            )
-        }
-        composable(Routes.Result) {
-            val parentEntry = remember(it) {
-                navController.getBackStackEntry(Routes.Input)
+            composable(Routes.Home) {
+                HomeScreen(
+                    onAnalyzeClick = { navController.navigate(Routes.VideoPicker) },
+                    onLogout = {
+                        navController.navigate(Routes.Auth) {
+                            popUpTo(Routes.Home) { inclusive = true }
+                        }
+                    },
+                    navController = navController
+                )
             }
-            val viewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
-            ResultScreen(
-                navController = navController,
-                viewModel = viewModel,
-                onCloseToHome = {
-                    navController.navigate(Routes.Home) {
-                        popUpTo(Routes.Home) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-            )
-        }
-        composable("analysis_detail/{analysisId}") { backStackEntry ->
-            val analysisId = backStackEntry.arguments?.getString("analysisId")?.toIntOrNull()
-            if (analysisId == null) {
-                navController.popBackStack()
-                return@composable
+            composable(Routes.VideoPicker) {
+                val parentEntry = remember(it) {
+                    navController.getBackStackEntry(Routes.Home)
+                }
+                val videoViewModel: VideoPickerViewModel = hiltViewModel(parentEntry)
+                VideoPickerScreen(
+                    viewModel = videoViewModel,
+                    onBack = { navController.popBackStack() },
+                    onVideoReady = {
+                        navController.navigate(Routes.Preview)
+                    },
+                )
             }
-            AnalysisDetailScreen(
-                navController = navController,
-                analysisId = analysisId
-            )
+            composable(Routes.Preview) {
+                val parentEntry = remember(it) {
+                    navController.getBackStackEntry(Routes.Home)
+                }
+                val videoViewModel: VideoPickerViewModel = hiltViewModel(parentEntry)
+                val analyzeViewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
+                VideoPreviewScreen(
+                    viewModel = videoViewModel,
+                    onBack = { navController.popBackStack() },
+                    onContinue = {
+                        analyzeViewModel.setVideoContext(videoViewModel.getVideoContext())
+                        navController.navigate(Routes.Input)
+                    },
+                    onPickDifferent = {
+                        videoViewModel.clearSelection()
+                        navController.navigate(Routes.VideoPicker) {
+                            popUpTo(Routes.VideoPicker) { inclusive = true }
+                        }
+                    },
+                )
+            }
+            composable(Routes.Input) {
+                val viewModel: AnalyzeViewModel = hiltViewModel()
+                TitleInputScreen(
+                    viewModel = viewModel,
+                    navController = navController,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.Loading) {
+                val parentEntry = remember(it) {
+                    navController.getBackStackEntry(Routes.Home)
+                }
+                val viewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
+                LoadingScreen(
+                    viewModel = viewModel,
+                    onCancel = { navController.popBackStack() },
+                    onFinished = {
+                        navController.navigate(Routes.Result) {
+                            popUpTo(Routes.Loading) { inclusive = true }
+                        }
+                    },
+                )
+            }
+            composable(Routes.Result) {
+                val viewModel: AnalyzeViewModel = viewModel()
+                ResultScreen(
+                    navController = navController,
+                    viewModel = viewModel,
+                    onCloseToHome = {
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Home) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+            composable(
+                route = "analysis_detail/{analysisId}",
+                arguments = listOf(navArgument("analysisId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val analysisId = backStackEntry.arguments?.getInt("analysisId") ?: -1
+                if (analysisId == -1) {
+                    navController.popBackStack()
+                    return@composable
+                }
+                AnalysisDetailScreen(
+                    navController = navController,
+                    analysisId = analysisId
+                )
+            }
         }
     }
 }

@@ -49,14 +49,14 @@ class AnalyzeViewModel @Inject constructor(
 
     fun hasVideoContext(): Boolean = videoContext != null
 
-    fun analyze(title: String, description: String, platform: Platform) {
+    fun analyze(title: String, description: String, platform: Platform, language: String) {
         viewModelScope.launch {
             _uiState.value = AnalyzeUiState.Loading
             try {
                 val response = repository.analyze(
                     title = title,
                     description = description,
-                    language = "tr",
+                    language = language,
                     platform = platform.displayName
                 )
                 _uiState.value = AnalyzeUiState.Success(response)
@@ -65,7 +65,18 @@ class AnalyzeViewModel @Inject constructor(
                 saveToHistory(title, response, platform)
                 
             } catch (e: Exception) {
-                _uiState.value = AnalyzeUiState.Error(e.message ?: "Bağlantı hatası")
+                val message = when {
+                    e.message?.contains("502") == true ||
+                            e.message?.contains("503") == true ->
+                        "Sunucu şu an meşgul, lütfen birkaç saniye bekleyip tekrar deneyin."
+                    e.message?.contains("timeout") == true ||
+                            e.message?.contains("timed out") == true ->
+                        "Bağlantı zaman aşımına uğradı. Sunucu uyanıyor olabilir, tekrar deneyin."
+                    e.message?.contains("Unable to resolve host") == true ->
+                        "İnternet bağlantısı yok. Lütfen bağlantını kontrol et."
+                    else -> "Bir hata oluştu: ${e.message}"
+                }
+                _uiState.value = AnalyzeUiState.Error(message)
             }
         }
     }

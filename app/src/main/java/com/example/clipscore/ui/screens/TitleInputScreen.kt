@@ -33,6 +33,8 @@ import com.example.clipscore.data.model.Platform
 import com.example.clipscore.ui.theme.*
 import com.example.clipscore.ui.viewmodel.AnalyzeUiState
 import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
+import com.example.clipscore.util.SnackbarManager
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,18 +46,22 @@ fun TitleInputScreen(
 ) {
     var titleText by rememberSaveable { mutableStateOf("") }
     var descriptionText by rememberSaveable { mutableStateOf("") }
-    var selectedLanguage by rememberSaveable { mutableStateOf("tr") }
     var selectedPlatform by remember { mutableStateOf(Platform.TIKTOK) }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(uiState) {
-        if (uiState is AnalyzeUiState.Success) {
-            navController.navigate("result") {
-                launchSingleTop = true
+        when (uiState) {
+            is AnalyzeUiState.Success -> {
+                navController.navigate("result") {
+                    launchSingleTop = true
+                }
             }
+            is AnalyzeUiState.Error -> {
+                SnackbarManager.showError((uiState as AnalyzeUiState.Error).message)
+            }
+            else -> {}
         }
     }
 
@@ -68,7 +74,6 @@ fun TitleInputScreen(
                 })
             },
         containerColor = BrandBg,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -225,34 +230,15 @@ fun TitleInputScreen(
                 imeAction = ImeAction.Default,
             )
 
-            Text(
-                text = "Dil",
-                fontFamily = Nunito,
-                fontSize = 13.sp,
-                color = BrandText.copy(alpha = 0.7f),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                LanguageToggle(
-                    text = "🇹🇷 Türkçe",
-                    selected = selectedLanguage == "tr",
-                    onClick = { selectedLanguage = "tr" },
-                    modifier = Modifier.weight(1f),
-                )
-                LanguageToggle(
-                    text = "🇬🇧 English",
-                    selected = selectedLanguage == "en",
-                    onClick = { selectedLanguage = "en" },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
             Spacer(modifier = Modifier.height(6.dp))
             Button(
                 onClick = {
+                    val language = if (Locale.getDefault().language == "tr") "tr" else "en"
                     viewModel.analyze(
                         title = titleText,
                         description = descriptionText,
-                        platform = selectedPlatform
+                        platform = selectedPlatform,
+                        language = language
                     )
                 },
                 enabled = uiState !is AnalyzeUiState.Loading && titleText.isNotBlank(),
@@ -267,14 +253,6 @@ fun TitleInputScreen(
                 } else {
                     Text("Skoru Hesapla")
                 }
-            }
-
-            if (uiState is AnalyzeUiState.Error) {
-                Text(
-                    text = (uiState as AnalyzeUiState.Error).message,
-                    color = Color(0xFFEF4444),
-                    modifier = Modifier.padding(top = 8.dp)
-                )
             }
         }
     }
@@ -332,35 +310,5 @@ private fun LabeledField(
                 unfocusedTextColor = BrandText,
             ),
         )
-    }
-}
-
-@Composable
-private fun LanguageToggle(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (selected) {
-        Button(
-            onClick = onClick,
-            modifier = modifier.height(44.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = BrandPrimary,
-                contentColor = BrandText,
-            ),
-        ) {
-            Text(text = text, fontFamily = Nunito, fontWeight = FontWeight.SemiBold)
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = modifier.height(44.dp),
-            border = BorderStroke(1.dp, BrandBorder),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandText),
-        ) {
-            Text(text = text, fontFamily = Nunito)
-        }
     }
 }

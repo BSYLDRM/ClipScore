@@ -25,6 +25,7 @@ import androidx.navigation.NavController
 import com.example.clipscore.data.model.Platform
 import com.example.clipscore.data.local.AnalysisEntity
 import com.example.clipscore.data.local.ClipScoreDatabase
+import com.example.clipscore.util.SnackbarManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -190,6 +191,7 @@ fun AnalysisDetailScreen(
                             IconButton(
                                 onClick = {
                                     clipboardManager.setText(AnnotatedString(hook))
+                                    SnackbarManager.showSuccess("Kopyalandı!")
                                 }
                             ) {
                                 Icon(
@@ -225,6 +227,7 @@ fun AnalysisDetailScreen(
                         TextButton(
                             onClick = {
                                 clipboardManager.setText(AnnotatedString(data.description))
+                                SnackbarManager.showSuccess("Kopyalandı!")
                             }
                         ) {
                             Text("Kopyala", color = Color(0xFF7C3AED))

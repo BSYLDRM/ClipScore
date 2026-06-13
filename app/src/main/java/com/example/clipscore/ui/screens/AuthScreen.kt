@@ -93,6 +93,8 @@ import com.example.clipscore.ui.theme.Montserrat
 import com.example.clipscore.ui.theme.Nunito
 import com.example.clipscore.ui.viewmodel.AuthUiState
 import com.example.clipscore.ui.viewmodel.AuthViewModel
+import com.example.clipscore.util.SnackbarManager
+import com.example.clipscore.util.SnackbarType
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.delay
@@ -106,7 +108,6 @@ fun AuthScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     val pagerState = rememberPagerState(pageCount = { 2 })
@@ -116,12 +117,19 @@ fun AuthScreen(
     }
 
     LaunchedEffect(uiState) {
-        if (uiState is AuthUiState.Success) {
-            val email = viewModel.googleAuthHelper.getCurrentUserEmail()
-            onAuthed(email)
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true }
+        when (uiState) {
+            is AuthUiState.Success -> {
+                val email = viewModel.googleAuthHelper.getCurrentUserEmail()
+                onAuthed(email)
+                SnackbarManager.showSuccess("Giriş başarılı! Hoş geldin 👋")
+                navController.navigate("home") {
+                    popUpTo("login") { inclusive = true }
+                }
             }
+            is AuthUiState.Error -> {
+                SnackbarManager.showError((uiState as AuthUiState.Error).message)
+            }
+            else -> {}
         }
     }
 
@@ -143,7 +151,6 @@ fun AuthScreen(
             .background(BrandBg)
             .imePadding(),
         containerColor = BrandBg,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -170,7 +177,6 @@ fun AuthScreen(
             ) { page ->
                 when (page) {
                     0 -> LoginTab(
-                        snackbarHostState = snackbarHostState,
                         viewModel = viewModel,
                         onGoogleSignInClick = {
                             val signInIntent = viewModel.googleAuthHelper
@@ -180,7 +186,6 @@ fun AuthScreen(
                         }
                     )
                     else -> SignupTab(
-                        snackbarHostState = snackbarHostState,
                         viewModel = viewModel,
                         onGoogleSignInClick = {
                             val signInIntent = viewModel.googleAuthHelper
@@ -283,7 +288,6 @@ private fun AuthTabs(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LoginTab(
-    snackbarHostState: SnackbarHostState,
     viewModel: AuthViewModel,
     onGoogleSignInClick: () -> Unit,
 ) {
@@ -348,12 +352,9 @@ private fun LoginTab(
             },
         )
 
-        ErrorMessage(uiState = uiState)
-
         OrDivider()
 
         SocialButtons(
-            snackbarHostState = snackbarHostState,
             onGoogleSignInClick = onGoogleSignInClick,
             enabled = !isLoading
         )
@@ -363,7 +364,6 @@ private fun LoginTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SignupTab(
-    snackbarHostState: SnackbarHostState,
     viewModel: AuthViewModel,
     onGoogleSignInClick: () -> Unit,
 ) {
@@ -456,48 +456,12 @@ private fun SignupTab(
             },
         )
 
-        ErrorMessage(uiState = uiState)
+        OrDivider()
 
         SocialButtons(
-            snackbarHostState = snackbarHostState,
             onGoogleSignInClick = onGoogleSignInClick,
             enabled = !isLoading
         )
-    }
-}
-
-@Composable
-private fun ErrorMessage(uiState: AuthUiState) {
-    AnimatedVisibility(
-        visible = uiState is AuthUiState.Error,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically()
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0x33EF4444)
-            ),
-            border = BorderStroke(1.dp, Color(0xFFEF4444)),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "⚠️",
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(
-                    text = (uiState as? AuthUiState.Error)?.message ?: "",
-                    color = Color(0xFFEF4444),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
     }
 }
 
@@ -562,7 +526,6 @@ private fun OrDivider() {
 
 @Composable
 private fun SocialButtons(
-    snackbarHostState: SnackbarHostState,
     onGoogleSignInClick: () -> Unit,
     enabled: Boolean = true
 ) {
@@ -590,7 +553,7 @@ private fun SocialButtons(
         }
 
         OutlinedButton(
-            onClick = { scope.launch { snackbarHostState.showSnackbar("Apple girişi aktif değil (mock)") } },
+            onClick = { SnackbarManager.showInfo("Apple girişi aktif değil (mock)") },
             enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()

@@ -14,9 +14,22 @@ object RetrofitClient {
     private val gson: Gson = GsonBuilder().create()
 
     private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(90, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
+        .writeTimeout(90, TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            val request = chain.request()
+            var response = chain.proceed(request)
+            var tryCount = 0
+            // 502 veya 503 alınca 2 kez daha dene
+            while ((response.code() == 502 || response.code() == 503) && tryCount < 2) {
+                tryCount++
+                response.close()
+                Thread.sleep(2000L * tryCount) // 2sn, 4sn bekle
+                response = chain.proceed(request)
+            }
+            response
+        }
         .build()
 
     private val retrofit: Retrofit = Retrofit.Builder()
