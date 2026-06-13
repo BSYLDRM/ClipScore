@@ -5,7 +5,7 @@ import threading
 import traceback
 
 import requests
-import anthropic
+import google.generativeai as genai
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -15,11 +15,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, origins=["*"])
 
-# Claude Client Initialization
-client = anthropic.Anthropic(
-    api_key=os.environ.get("ANTHROPIC_API_KEY"),
-    timeout=100.0  # 100 saniye timeout
-)
+# Gemini Client Initialization
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 request_counts = {}
 
@@ -113,17 +111,10 @@ SADECE şu JSON formatında yanıt ver:
 }}
 """
 
-        # Claude API call
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1000,
-            timeout=100.0,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
+        # Gemini API call
+        response = model.generate_content(prompt)
+        raw_text = response.text
 
-        raw_text = message.content[0].text
         cleaned = _strip_markdown_fences(raw_text)
         result = json.loads(cleaned)
         return jsonify(result), 200
