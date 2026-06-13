@@ -101,7 +101,9 @@ class AnalyzeViewModel @Inject constructor(
                 ctaScore = response.ctaScore,
                 hooks = response.hooks.joinToString("|||"),
                 description = response.description,
-                hashtags = response.hashtags.joinToString("|||")
+                hashtags = response.hashtags.joinToString("|||"),
+                contentMatchScore = response.contentMatchScore,
+                videoContentDescription = response.videoContentDescription
             )
             analysisDao.insertAnalysis(entity)
             analysisDao.keepOnlyLast10(currentUserEmail)

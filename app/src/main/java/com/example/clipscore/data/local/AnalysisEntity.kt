@@ -18,5 +18,7 @@ data class AnalysisEntity(
     val hooks: String,        // JSON string olarak sakla
     val description: String,
     val hashtags: String,     // JSON string olarak sakla
+    val contentMatchScore: Int = 0,
+    val videoContentDescription: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

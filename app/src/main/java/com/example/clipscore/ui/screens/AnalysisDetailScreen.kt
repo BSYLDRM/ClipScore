@@ -148,6 +148,35 @@ fun AnalysisDetailScreen(
                     ScoreCardDetail("❤️ Duygu", data.emotionScore, Modifier.weight(1f))
                     ScoreCardDetail("📢 CTA", data.ctaScore, Modifier.weight(1f))
                 }
+
+                if (data.contentMatchScore > 0) {
+                    Spacer(Modifier.height(8.dp))
+                    ScoreCardDetail("🎬 İçerik Uyumu", data.contentMatchScore, Modifier.fillMaxWidth())
+                }
+
+                if (data.videoContentDescription.isNotBlank()) {
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2A)),
+                        border = BorderStroke(1.dp, Color(0xFF7C3AED))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "🤖 AI Video Analizi",
+                                color = Color(0xFF7C3AED),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = data.videoContentDescription,
+                                color = Color(0xFFCCCCCC),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
                 
                 Spacer(Modifier.height(16.dp))
                 
