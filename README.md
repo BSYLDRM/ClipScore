@@ -80,9 +80,6 @@ Video yükle → Platform seç → AI viral potansiyelini 0-100 arası puanlar �
       <img src="prodocs/screenshots/Screenshot_20260613_165029.png" width="200"/>
       <br/><b>2. Video Önizleme</b>
     </td>
-    <td align="center">
-      <img src="prodocs/screenshots/Screenshot_20260506_112251.png" width="200"/>
-      <br/><b>3. Video Detayları</b>
     </td>
   </tr>
 </table>
@@ -92,7 +89,7 @@ Video yükle → Platform seç → AI viral potansiyelini 0-100 arası puanlar �
 <table>
   <tr>
     <td align="center">
-      <img src="prodocs/screenshots/Screenshot_20260613_124458.png" width="200"/>
+      <img src="prodocs/screenshots/Screenshot_20260613_165117.png" width="200"/>
       <br/><b>4. Platform Seç</b>
     </td>
     <td align="center">
