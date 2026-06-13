@@ -159,8 +159,8 @@ Kullanıcı
 Android (Kotlin + Jetpack Compose)
     ↓  Retrofit / OkHttp
 Backend (Python / Flask) — Render.com
-    ↓  Anthropic API
-Claude AI (claude-sonnet)
+    ↓  Gemini API
+Gemini AI 
 ```
 
 ```
@@ -210,7 +210,7 @@ BACKEND_URL=https://clipscore-dmmb.onrender.com/
 
 ```env
 # backend/.env
-ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=sk-ant-...
 PORT=5000
 ```
 
@@ -238,7 +238,7 @@ Backend **Render.com** üzerinde çalışmaktadır:
 
 ### Backend
 - **Python 3.11** + **Flask** + **Gunicorn**
-- **Anthropic Claude API** — AI analiz motoru
+- **GEMINI API** — AI analiz motoru
 - **Flask-CORS** — Cross-origin desteği
 
 ---
