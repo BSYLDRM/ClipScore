@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import threading
 
 import requests
 from dotenv import load_dotenv
@@ -59,12 +60,14 @@ def analyze():
             429,
         )
 
-    body = request.get_json(silent=True)
-    if body is None:
-        body = {}
-    title = body.get("title", "")
-    description = body.get("description", "")
-    language = body.get("language", "tr")
+    data = request.get_json(silent=True)
+    if data is None:
+        data = {}
+
+    title = data.get("title", "")
+    description = data.get("description", "")
+    language = data.get("language", "tr")
+    platform = data.get("platform", "TikTok")
 
     title_str = str(title).strip() if title is not None else ""
     desc_str = str(description).strip() if description is not None else ""
@@ -72,33 +75,45 @@ def analyze():
     if not title_str or not desc_str:
         return jsonify({"error": "Başlık ve açıklama zorunludur"}), 400
 
-    if len(title_str) > 200 or len(desc_str) > 1000:
-        return (
-            jsonify(
-                {
-                    "error": "Başlık en fazla 200, açıklama en fazla 1000 karakter olabilir"
-                }
-            ),
-            400,
-        )
-
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return jsonify({"error": "API anahtarı yapılandırılmamış"}), 500
 
-    prompt = (
-        "Sen bir sosyal medya içerik uzmanısın. Aşağıdaki kısa video içeriğini analiz et ve SADECE geçerli JSON döndür. Başka hiçbir şey yazma, markdown kullanma, sadece ham JSON.\n\n"
-        f"Başlık: {title_str}\nAçıklama: {desc_str}\nDil: {language}\n\n"
-        'JSON formatı:\n{"vibeScore": <0-100>, "hookScore": <0-100>, "keywordScore": <0-100>, "emotionScore": <0-100>, "ctaScore": <0-100>, "hooks": ["hook1", "hook2", "hook3"], "description": "<SEO açıklama>", "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]}'
-    )
+    prompt = f"""
+Sen bir viral sosyal medya içerik uzmanısın.
+Aşağıdaki {platform} içeriğini analiz et ve SADECE JSON döndür.
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+Platform: {platform}
+Başlık: {title_str}
+Açıklama: {desc_str}
+Dil: {language}
+
+{platform} platformuna özel kriterler:
+- TikTok: trend müzik uyumu, hızlı dikkat çekme, GenZ dili
+- Instagram Reels: görsel estetik, hikaye anlatımı, topluluk etkileşimi
+- YouTube Shorts: thumbnail etkisi, arama optimizasyonu, izlenme süresi
+- YouTube: SEO anahtar kelimeler, izlenme süresi, abonelik çağrısı
+- X (Twitter): özlü mesaj, tartışma yaratma, retweet potansiyeli
+
+SADECE şu JSON formatında yanıt ver:
+{{
+  "vibeScore": <0-100 {platform} için viral potansiyel>,
+  "hookScore": <0-100 ilk 3 saniye dikkat çekicilik>,
+  "keywordScore": <0-100 {platform} SEO uyumu>,
+  "emotionScore": <0-100 duygusal etki>,
+  "ctaScore": <0-100 harekete geçirme kalitesi>,
+  "hooks": ["<{platform} için hook 1>", "<hook 2>", "<hook 3>"],
+  "description": "<{platform} için optimize edilmiş açıklama>",
+  "hashtags": ["#{platform.lower().replace(' ', '')}tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
+}}
+"""
+
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.7,
             "maxOutputTokens": 2000,
-            "thinkingConfig": {"thinkingBudget": 0}
         },
     }
 
@@ -112,23 +127,34 @@ def analyze():
             json=payload,
             timeout=60,
         )
-        print("Gemini status:", resp.status_code)
-        print("Gemini response:", resp.text[:500])
         if resp.status_code != 200:
             return jsonify({"error": "Gemini API hatası", "detail": resp.text}), 502
 
-        data = resp.json()
-        raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+        data_json = resp.json()
+        raw_text = data_json["candidates"][0]["content"]["parts"][0]["text"]
         cleaned = _strip_markdown_fences(raw_text)
         result = json.loads(cleaned)
         return jsonify(result), 200
     except Exception as e:
         print("HATA:", str(e))
-        print("RESPONSE:", resp.text if 'resp' in locals() else "istek gitmedi")
-        return jsonify({"error": "Gemini API hatası", "detail": str(e)}), 502
+        return jsonify({"error": "Analiz sırasında bir hata oluştu", "detail": str(e)}), 500
+
+
+def keep_alive():
+    while True:
+        try:
+            url = os.environ.get("RENDER_EXTERNAL_URL", "https://clipscore-dmmb.onrender.com")
+            requests.get(f"{url}/api/health")
+        except:
+            pass
+        time.sleep(840)  # 14 dakikada bir ping at
 
 
 if __name__ == "__main__":
+    # App başlarken thread'i başlat
+    thread = threading.Thread(target=keep_alive, daemon=True)
+    thread.start()
+
     port = int(os.getenv("PORT", "5000"))
     print("ClipScore Backend çalışıyor...")
     app.run(host="0.0.0.0", port=port)

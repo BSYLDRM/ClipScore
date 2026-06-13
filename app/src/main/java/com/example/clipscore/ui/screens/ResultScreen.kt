@@ -3,7 +3,6 @@ package com.example.clipscore.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.BorderStroke
@@ -21,15 +20,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,18 +42,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.clipscore.data.model.AnalyzeResponse
 import com.example.clipscore.ui.components.ScoreCard
 import com.example.clipscore.ui.theme.BrandBg
@@ -67,23 +67,21 @@ import com.example.clipscore.ui.theme.BrandText
 import com.example.clipscore.ui.theme.BrandWarning
 import com.example.clipscore.ui.theme.Montserrat
 import com.example.clipscore.ui.theme.Nunito
+import com.example.clipscore.ui.viewmodel.AnalyzeUiState
 import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
-import com.google.gson.Gson
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
+    navController: NavController,
+    viewModel: AnalyzeViewModel,
     onCloseToHome: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val gson = remember { Gson() }
-    val response = remember {
-        val prefs = context.getSharedPreferences(AnalyzeViewModel.PREFS_NAME, Context.MODE_PRIVATE)
-        val json = prefs.getString(AnalyzeViewModel.KEY_LAST_RESULT, null)
-        json?.let { runCatching { gson.fromJson(it, AnalyzeResponse::class.java) }.getOrNull() }
-    }
+    val uiState by viewModel.uiState.collectAsState()
+    val response = (uiState as? AnalyzeUiState.Success)?.result
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -208,51 +206,22 @@ fun ResultScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(4.dp))
-                SectionTitle(title = "Hashtagler")
-                Spacer(modifier = Modifier.height(10.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(data.hashtags) { tag ->
-                        AssistChip(
-                            onClick = { copyToClipboard(tag) },
-                            label = {
-                                Text(
-                                    text = tag,
-                                    fontFamily = Nunito,
-                                    fontSize = 13.sp,
-                                )
-                            },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = BrandSurface,
-                                labelColor = BrandText,
-                            ),
-                            border = AssistChipDefaults.assistChipBorder(
-                                enabled = true,
-                                borderColor = BrandPrimary,
-                            ),
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item {
-                androidx.compose.material3.OutlinedButton(
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
                     onClick = {
-                        val shareText =
-                            "ClipScore Analizim: VibeScore ${data.vibeScore}/100 🚀 #ClipScore"
-                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, shareText)
+                        viewModel.resetState()
+                        navController.navigate("title_input") {
+                            popUpTo(0) { inclusive = true }
+                            launchSingleTop = true
                         }
-                        context.startActivity(Intent.createChooser(sendIntent, "Paylaş"))
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    border = BorderStroke(1.dp, BrandBorder),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary)
                 ) {
-                    Text(text = "📤 Sonuçları Paylaş", fontFamily = Nunito, color = BrandText)
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(text = "Yeni Analiz", fontFamily = Montserrat, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -263,60 +232,45 @@ fun ResultScreen(
 private fun VibeHero(score: Int, modifier: Modifier = Modifier) {
     val animatedScore by animateIntAsState(targetValue = score, label = "vibeScore")
     val labelColor = when {
-        score < 41 -> BrandError
-        score < 71 -> BrandWarning
-        else -> BrandSuccess
+        score < 41 -> Color(0xFFEF4444) // Kırmızı
+        score < 71 -> Color(0xFFFACC15) // Sarı
+        else -> Color(0xFF22C55E) // Yeşil
     }
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = BrandSurface),
+        border = BorderStroke(1.dp, BrandBorder),
+        shape = RoundedCornerShape(24.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(listOf(BrandPrimary, Color(0xFF4C1D95))),
-                    shape = MaterialTheme.shapes.extraLarge,
-                )
-                .padding(vertical = 26.dp, horizontal = 18.dp),
-            contentAlignment = Alignment.Center,
+        Column(
+            modifier = Modifier.padding(24.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = animatedScore.toString(),
-                    fontFamily = Montserrat,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 72.sp,
-                    color = Color.White,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "VibeScore",
-                    fontFamily = Nunito,
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.85f),
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.16f)),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
-                    shape = CircleShape,
-                ) {
-                    Text(
-                        text = when {
-                            score < 41 -> "KÖTÜ"
-                            score < 71 -> "ORTA"
-                            else -> "İYİ"
-                        },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        fontFamily = Montserrat,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = labelColor,
-                    )
-                }
-            }
+            Text(
+                text = "VibeScore",
+                fontFamily = Nunito,
+                fontSize = 16.sp,
+                color = BrandText.copy(alpha = 0.7f),
+            )
+            Text(
+                text = animatedScore.toString(),
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 84.sp,
+                color = labelColor,
+            )
+            Text(
+                text = when {
+                    score < 41 -> "Geliştirilmeli"
+                    score < 71 -> "Potansiyel Var"
+                    else -> "Mükemmel"
+                },
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = labelColor,
+            )
         }
     }
 }

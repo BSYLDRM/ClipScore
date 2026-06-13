@@ -1,5 +1,12 @@
 package com.example.clipscore.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,6 +23,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -38,6 +47,9 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,14 +74,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.example.clipscore.ui.components.ClipScoreButton
 import com.example.clipscore.ui.theme.BrandBg
 import com.example.clipscore.ui.theme.BrandBorder
@@ -79,18 +91,51 @@ import com.example.clipscore.ui.theme.BrandSurface
 import com.example.clipscore.ui.theme.BrandText
 import com.example.clipscore.ui.theme.Montserrat
 import com.example.clipscore.ui.theme.Nunito
+import com.example.clipscore.ui.viewmodel.AuthUiState
+import com.example.clipscore.ui.viewmodel.AuthViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
-    onAuthed: () -> Unit,
+    onAuthed: (String) -> Unit,
+    viewModel: AuthViewModel,
+    navController: NavController,
     modifier: Modifier = Modifier,
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     val pagerState = rememberPagerState(pageCount = { 2 })
+
+    LaunchedEffect(pagerState.currentPage) {
+        viewModel.resetState()
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is AuthUiState.Success) {
+            val email = viewModel.googleAuthHelper.getCurrentUserEmail()
+            onAuthed(email)
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true }
+            }
+        }
+    }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            account.idToken?.let { viewModel.handleGoogleSignInResult(it) }
+        } catch (e: ApiException) {
+            // sessiz hata
+        }
+    }
 
     Scaffold(
         modifier = modifier
@@ -126,11 +171,23 @@ fun AuthScreen(
                 when (page) {
                     0 -> LoginTab(
                         snackbarHostState = snackbarHostState,
-                        onAuthed = onAuthed,
+                        viewModel = viewModel,
+                        onGoogleSignInClick = {
+                            val signInIntent = viewModel.googleAuthHelper
+                                .getGoogleSignInClient()
+                                .signInIntent
+                            googleSignInLauncher.launch(signInIntent)
+                        }
                     )
                     else -> SignupTab(
                         snackbarHostState = snackbarHostState,
-                        onAuthed = onAuthed,
+                        viewModel = viewModel,
+                        onGoogleSignInClick = {
+                            val signInIntent = viewModel.googleAuthHelper
+                                .getGoogleSignInClient()
+                                .signInIntent
+                            googleSignInLauncher.launch(signInIntent)
+                        }
                     )
                 }
             }
@@ -227,13 +284,15 @@ private fun AuthTabs(
 @Composable
 private fun LoginTab(
     snackbarHostState: SnackbarHostState,
-    onAuthed: () -> Unit,
+    viewModel: AuthViewModel,
+    onGoogleSignInClick: () -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isLoading = uiState is AuthUiState.Loading
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         BrandOutlinedField(
@@ -243,6 +302,7 @@ private fun LoginTab(
             placeholder = "ornek@email.com",
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+            enabled = !isLoading
         )
 
         BrandOutlinedField(
@@ -262,15 +322,13 @@ private fun LoginTab(
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { }),
+            enabled = !isLoading
         )
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(
-                onClick = {
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Şifre sıfırlama bağlantısı gönderildi (mock)")
-                    }
-                },
+                onClick = { },
+                enabled = !isLoading
             ) {
                 Text(
                     text = "Şifremi Unuttum",
@@ -282,22 +340,23 @@ private fun LoginTab(
         }
 
         ClipScoreButton(
-            text = "Giriş Yap",
+            text = if (isLoading) "Lütfen bekleyin..." else "Giriş Yap",
             isLoading = isLoading,
+            enabled = !isLoading,
             onClick = {
-                if (isLoading) return@ClipScoreButton
-                scope.launch {
-                    isLoading = true
-                    delay(1500)
-                    isLoading = false
-                    onAuthed()
-                }
+                viewModel.loginWithEmail(email, password)
             },
         )
 
+        ErrorMessage(uiState = uiState)
+
         OrDivider()
 
-        SocialButtons(snackbarHostState = snackbarHostState)
+        SocialButtons(
+            snackbarHostState = snackbarHostState,
+            onGoogleSignInClick = onGoogleSignInClick,
+            enabled = !isLoading
+        )
     }
 }
 
@@ -305,7 +364,8 @@ private fun LoginTab(
 @Composable
 private fun SignupTab(
     snackbarHostState: SnackbarHostState,
-    onAuthed: () -> Unit,
+    viewModel: AuthViewModel,
+    onGoogleSignInClick: () -> Unit,
 ) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -313,8 +373,9 @@ private fun SignupTab(
     var password2 by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isLoading = uiState is AuthUiState.Loading
 
     val passwordsMismatch = password2.isNotBlank() && password != password2
 
@@ -326,6 +387,7 @@ private fun SignupTab(
             placeholder = "Ahmet Yılmaz",
             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+            enabled = !isLoading
         )
 
         BrandOutlinedField(
@@ -335,6 +397,7 @@ private fun SignupTab(
             placeholder = "ornek@email.com",
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+            enabled = !isLoading
         )
 
         BrandOutlinedField(
@@ -353,6 +416,7 @@ private fun SignupTab(
             },
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
+            enabled = !isLoading
         )
 
         BrandOutlinedField(
@@ -365,6 +429,7 @@ private fun SignupTab(
             isError = passwordsMismatch,
             supportingText = if (passwordsMismatch) "Şifreler eşleşmiyor" else null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+            enabled = !isLoading
         )
 
         Row(
@@ -374,31 +439,65 @@ private fun SignupTab(
             Checkbox(
                 checked = termsAccepted,
                 onCheckedChange = { termsAccepted = it },
+                enabled = !isLoading
             )
             Spacer(modifier = Modifier.width(10.dp))
             TermsText(
-                onTermsClick = {
-                    scope.launch { snackbarHostState.showSnackbar("Koşullar sayfası yakında") }
-                },
+                onTermsClick = { },
             )
         }
 
         ClipScoreButton(
-            text = "Hesap Oluştur",
-            enabled = termsAccepted,
+            text = if (isLoading) "Lütfen bekleyin..." else "Hesap Oluştur",
+            enabled = termsAccepted && !isLoading,
             isLoading = isLoading,
             onClick = {
-                if (isLoading) return@ClipScoreButton
-                scope.launch {
-                    isLoading = true
-                    delay(1500)
-                    isLoading = false
-                    onAuthed()
-                }
+                viewModel.registerWithEmail(email, password, password2)
             },
         )
 
-        SocialButtons(snackbarHostState = snackbarHostState)
+        ErrorMessage(uiState = uiState)
+
+        SocialButtons(
+            snackbarHostState = snackbarHostState,
+            onGoogleSignInClick = onGoogleSignInClick,
+            enabled = !isLoading
+        )
+    }
+}
+
+@Composable
+private fun ErrorMessage(uiState: AuthUiState) {
+    AnimatedVisibility(
+        visible = uiState is AuthUiState.Error,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0x33EF4444)
+            ),
+            border = BorderStroke(1.dp, Color(0xFFEF4444)),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "⚠️",
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    text = (uiState as? AuthUiState.Error)?.message ?: "",
+                    color = Color(0xFFEF4444),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }
 
@@ -462,11 +561,16 @@ private fun OrDivider() {
 }
 
 @Composable
-private fun SocialButtons(snackbarHostState: SnackbarHostState) {
+private fun SocialButtons(
+    snackbarHostState: SnackbarHostState,
+    onGoogleSignInClick: () -> Unit,
+    enabled: Boolean = true
+) {
     val scope = rememberCoroutineScope()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedButton(
-            onClick = { scope.launch { snackbarHostState.showSnackbar("Google girişi aktif değil (mock)") } },
+            onClick = onGoogleSignInClick,
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -487,6 +591,7 @@ private fun SocialButtons(snackbarHostState: SnackbarHostState) {
 
         OutlinedButton(
             onClick = { scope.launch { snackbarHostState.showSnackbar("Apple girişi aktif değil (mock)") } },
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -522,6 +627,7 @@ private fun BrandOutlinedField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     isError: Boolean = false,
     supportingText: String? = null,
+    enabled: Boolean = true
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -579,6 +685,7 @@ private fun BrandOutlinedField(
                 }
             },
             shape = RoundedCornerShape(12.dp),
+            enabled = enabled,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = BrandSurface,
                 unfocusedContainerColor = BrandSurface,
@@ -595,4 +702,3 @@ private fun BrandOutlinedField(
         )
     }
 }
-

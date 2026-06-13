@@ -1,3 +1,29 @@
 <resources>
     <string name="app_name">ClipScore</string>
+
+    <string name="video_picker_title">Video Seç</string>
+    <string name="video_picker_subtitle">Galeriden MP4 veya MOV formatında bir video seçin</string>
+    <string name="video_picker_cta">Video Seç</string>
+    <string name="video_picker_loading">Video analiz ediliyor…</string>
+
+    <string name="video_preview_title">Video Önizleme</string>
+    <string name="video_preview_details">Video Detayları</string>
+    <string name="video_preview_start_analysis">Analizi Başlat</string>
+    <string name="video_preview_pick_different">Farklı Video Seç</string>
+    <string name="video_preview_size_warning">Video boyutu 500MB sınırını aşıyor. Daha küçük bir video seçin.</string>
+
+    <string name="metadata_duration">Süre</string>
+    <string name="metadata_resolution">Çözünürlük</string>
+    <string name="metadata_file_size">Dosya Boyutu</string>
+    <string name="metadata_frame_rate">Kare Hızı</string>
+
+    <string name="error_unsupported_format">Bu video formatı desteklenmiyor. Lütfen MP4 veya MOV formatında bir video seçin.</string>
+    <string name="error_file_too_large">Video boyutu 500MB sınırını aşıyor. Daha küçük bir video seçin.</string>
+    <string name="error_metadata_read_failed">Video metadata\'sı okunamadı. Farklı bir video deneyin.</string>
+    <string name="error_permission_required">Galeri erişim izni gerekli. Ayarlar &gt; Uygulama İzinleri\'nden izin verin.</string>
+    <string name="error_permission_rationale">Video seçebilmek için galeri erişim izni gereklidir.</string>
+    <string name="action_open_settings">Ayarları Aç</string>
+    <string name="action_grant_permission">İzin Ver</string>
+
+    <string name="title_input_video_attached">Seçilen video metadata\'sı analize eklenecek</string>
 </resources>

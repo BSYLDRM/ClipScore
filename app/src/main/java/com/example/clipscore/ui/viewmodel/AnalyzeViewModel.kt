@@ -3,9 +3,15 @@ package com.example.clipscore.ui.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.clipscore.data.local.AnalysisDao
+import com.example.clipscore.data.local.AnalysisEntity
 import com.example.clipscore.data.model.AnalyzeRequest
+import com.example.clipscore.data.model.Platform
+import com.example.clipscore.data.model.VideoContext
+import com.example.clipscore.util.VideoFormatUtils
 import com.example.clipscore.data.model.AnalyzeResponse
 import com.example.clipscore.data.repository.AnalyzeRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -16,15 +22,16 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed class AnalyzeUiState {
-    data object Idle : AnalyzeUiState()
-    data object Loading : AnalyzeUiState()
-    data class Success(val response: AnalyzeResponse) : AnalyzeUiState()
+    object Idle : AnalyzeUiState()
+    object Loading : AnalyzeUiState()
+    data class Success(val result: AnalyzeResponse) : AnalyzeUiState()
     data class Error(val message: String) : AnalyzeUiState()
 }
 
 @HiltViewModel
 class AnalyzeViewModel @Inject constructor(
     private val repository: AnalyzeRepository,
+    private val analysisDao: AnalysisDao,
     @ApplicationContext private val context: Context,
     private val gson: Gson,
 ) : ViewModel() {
@@ -34,24 +41,71 @@ class AnalyzeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<AnalyzeUiState>(AnalyzeUiState.Idle)
     val uiState: StateFlow<AnalyzeUiState> = _uiState.asStateFlow()
 
-    fun analyze(title: String, description: String, language: String) {
+    private var videoContext: VideoContext? = null
+
+    fun setVideoContext(context: VideoContext?) {
+        videoContext = context
+    }
+
+    fun hasVideoContext(): Boolean = videoContext != null
+
+    fun analyze(title: String, description: String, platform: Platform) {
         viewModelScope.launch {
             _uiState.value = AnalyzeUiState.Loading
-            repository.analyze(AnalyzeRequest(title, description, language))
-                .onSuccess { response ->
-                    prefs.edit().putString(KEY_LAST_RESULT, gson.toJson(response)).apply()
-                    _uiState.value = AnalyzeUiState.Success(response)
-                }
-                .onFailure { e ->
-                    _uiState.value = AnalyzeUiState.Error(
-                        e.message?.takeIf { it.isNotBlank() } ?: "Analiz başarısız oldu",
-                    )
-                }
+            try {
+                val response = repository.analyze(
+                    title = title,
+                    description = description,
+                    language = "tr",
+                    platform = platform.displayName
+                )
+                _uiState.value = AnalyzeUiState.Success(response)
+                
+                // Save to Room
+                saveToHistory(title, response, platform)
+                
+            } catch (e: Exception) {
+                _uiState.value = AnalyzeUiState.Error(e.message ?: "Bağlantı hatası")
+            }
+        }
+    }
+
+    private fun saveToHistory(title: String, response: AnalyzeResponse, platform: Platform) {
+        viewModelScope.launch {
+            val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
+            val entity = AnalysisEntity(
+                userEmail = currentUserEmail,
+                platform = platform.displayName,
+                title = title,
+                vibeScore = response.vibeScore,
+                hookScore = response.hookScore,
+                keywordScore = response.keywordScore,
+                emotionScore = response.emotionScore,
+                ctaScore = response.ctaScore,
+                hooks = response.hooks.joinToString("|||"),
+                description = response.description,
+                hashtags = response.hashtags.joinToString("|||")
+            )
+            analysisDao.insertAnalysis(entity)
+            analysisDao.keepOnlyLast10(currentUserEmail)
         }
     }
 
     fun resetState() {
         _uiState.value = AnalyzeUiState.Idle
+    }
+
+    private fun buildEnrichedDescription(description: String, video: VideoContext?): String {
+        if (video == null) return description
+        return buildString {
+            append(description.trim())
+            append("\n\n[Video Metadata]\n")
+            append("Süre: ${VideoFormatUtils.formatDuration(video.durationMs)}\n")
+            append("Çözünürlük: ${VideoFormatUtils.formatResolution(video.width, video.height)}\n")
+            append("Dosya boyutu: ${VideoFormatUtils.formatFileSize(video.fileSizeBytes)}\n")
+            append("Kare hızı: ${VideoFormatUtils.formatFrameRate(video.frameRate)}\n")
+            append("Format: ${VideoFormatUtils.formatMimeType(video.mimeType)}")
+        }
     }
 
     companion object {

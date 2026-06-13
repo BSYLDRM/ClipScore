@@ -2,57 +2,35 @@ package com.example.clipscore.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.clipscore.ui.components.ClipScoreButton
-import com.example.clipscore.ui.theme.BrandBg
-import com.example.clipscore.ui.theme.BrandBorder
-import com.example.clipscore.ui.theme.BrandPrimary
-import com.example.clipscore.ui.theme.BrandSurface
-import com.example.clipscore.ui.theme.BrandText
-import com.example.clipscore.ui.theme.Montserrat
-import com.example.clipscore.ui.theme.Nunito
+import androidx.navigation.NavController
+import com.example.clipscore.R
+import com.example.clipscore.data.model.Platform
+import com.example.clipscore.ui.theme.*
 import com.example.clipscore.ui.viewmodel.AnalyzeUiState
 import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
 
@@ -60,36 +38,35 @@ import com.example.clipscore.ui.viewmodel.AnalyzeViewModel
 @Composable
 fun TitleInputScreen(
     viewModel: AnalyzeViewModel,
+    navController: NavController,
     onBack: () -> Unit,
-    onCalculate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var title by rememberSaveable { mutableStateOf("") }
-    var description by rememberSaveable { mutableStateOf("") }
+    var titleText by rememberSaveable { mutableStateOf("") }
+    var descriptionText by rememberSaveable { mutableStateOf("") }
     var selectedLanguage by rememberSaveable { mutableStateOf("tr") }
+    var selectedPlatform by remember { mutableStateOf(Platform.TIKTOK) }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) {
-        viewModel.resetState()
-    }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(uiState) {
-        when (val state = uiState) {
-            is AnalyzeUiState.Success -> onCalculate()
-            is AnalyzeUiState.Error -> {
-                snackbarHostState.showSnackbar(state.message)
-                viewModel.resetState()
+        if (uiState is AnalyzeUiState.Success) {
+            navController.navigate("result") {
+                launchSingleTop = true
             }
-            else -> Unit
         }
     }
 
-    val isLoading = uiState is AnalyzeUiState.Loading
-
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            },
         containerColor = BrandBg,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -116,7 +93,8 @@ fun TitleInputScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             LinearProgressIndicator(
@@ -128,23 +106,122 @@ fun TitleInputScreen(
                     .height(6.dp),
             )
 
+            if (viewModel.hasVideoContext()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(BrandSurface, shape = MaterialTheme.shapes.large)
+                        .padding(12.dp),
+                ) {
+                    Text(
+                        text = "🎬 ${stringResource(R.string.title_input_video_attached)}",
+                        fontFamily = Nunito,
+                        color = BrandPrimary,
+                        fontSize = 13.sp,
+                    )
+                }
+            }
+
+            Text(
+                text = "Platform Seç",
+                color = Color(0xFFF8FAFC),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(Platform.entries.toTypedArray()) { platform ->
+                    val isSelected = selectedPlatform == platform
+                    Card(
+                        modifier = Modifier
+                            .clickable { selectedPlatform = platform },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected)
+                                Color(0xFF7C3AED)
+                            else
+                                Color(0xFF1A1A1A)
+                        ),
+                        border = if (isSelected)
+                            BorderStroke(2.dp, Color(0xFF7C3AED))
+                        else
+                            BorderStroke(1.dp, Color(0xFF333333)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = 16.dp,
+                                vertical = 10.dp
+                            ),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = platform.emoji,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = platform.displayName,
+                                color = Color(0xFFF8FAFC),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = if (isSelected)
+                                    FontWeight.Bold
+                                else
+                                    FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0x337C3AED)
+                ),
+                border = BorderStroke(1.dp, Color(0x667C3AED)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "💡",
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        text = selectedPlatform.tips,
+                        color = Color(0xFFCCCCCC),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
             LabeledField(
                 label = "Video Başlığı",
-                value = title,
-                onValueChange = { if (it.length <= 200) title = it },
+                value = titleText,
+                onValueChange = { if (it.length <= selectedPlatform.maxTitleLength) titleText = it },
                 placeholder = "örn: Bir günde 10kg verdim!",
                 maxLines = 2,
-                counter = "${title.length}/200",
+                counter = "${titleText.length}/${selectedPlatform.maxTitleLength}",
                 imeAction = ImeAction.Next,
             )
 
             LabeledField(
                 label = "Açıklama",
-                value = description,
-                onValueChange = { if (it.length <= 1000) description = it },
+                value = descriptionText,
+                onValueChange = { if (it.length <= selectedPlatform.maxDescLength) descriptionText = it },
                 placeholder = "Videonuzun içeriğini kısaca anlatın...",
                 maxLines = 5,
-                counter = "${description.length}/1000",
+                counter = "${descriptionText.length}/${selectedPlatform.maxDescLength}",
                 imeAction = ImeAction.Default,
             )
 
@@ -156,13 +233,13 @@ fun TitleInputScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 LanguageToggle(
-                    text = "\uD83C\uDDF9\uD83C\uDDF7 Türkçe",
+                    text = "🇹🇷 Türkçe",
                     selected = selectedLanguage == "tr",
                     onClick = { selectedLanguage = "tr" },
                     modifier = Modifier.weight(1f),
                 )
                 LanguageToggle(
-                    text = "\uD83C\uDDEC\uD83C\uDDE7 English",
+                    text = "🇬🇧 English",
                     selected = selectedLanguage == "en",
                     onClick = { selectedLanguage = "en" },
                     modifier = Modifier.weight(1f),
@@ -170,14 +247,35 @@ fun TitleInputScreen(
             }
 
             Spacer(modifier = Modifier.height(6.dp))
-            ClipScoreButton(
-                text = "\uD83D\uDE80 Skoru Hesapla",
-                enabled = title.isNotBlank() && description.isNotBlank(),
-                isLoading = isLoading,
+            Button(
                 onClick = {
-                    viewModel.analyze(title, description, selectedLanguage)
+                    viewModel.analyze(
+                        title = titleText,
+                        description = descriptionText,
+                        platform = selectedPlatform
+                    )
                 },
-            )
+                enabled = uiState !is AnalyzeUiState.Loading && titleText.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary)
+            ) {
+                if (uiState is AnalyzeUiState.Loading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Analiz ediliyor... (ilk açılışta 30-60 sn sürebilir ⏳)")
+                } else {
+                    Text("Skoru Hesapla")
+                }
+            }
+
+            if (uiState is AnalyzeUiState.Error) {
+                Text(
+                    text = (uiState as AnalyzeUiState.Error).message,
+                    color = Color(0xFFEF4444),
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
         }
     }
 }

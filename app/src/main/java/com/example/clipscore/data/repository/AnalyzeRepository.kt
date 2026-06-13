@@ -13,4 +13,8 @@ class AnalyzeRepository @Inject constructor(
     suspend fun analyze(request: AnalyzeRequest): Result<AnalyzeResponse> = runCatching {
         api.analyze(request)
     }
+
+    suspend fun analyze(title: String, description: String, language: String, platform: String): AnalyzeResponse {
+        return api.analyze(AnalyzeRequest(title, description, language, platform))
+    }
 }

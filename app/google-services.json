@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "171143139929",
+    "project_id": "clipscore-b2708",
+    "storage_bucket": "clipscore-b2708.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:171143139929:android:a7164987707e6175185748",
+        "android_client_info": {
+          "package_name": "com.example.clipscore"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "171143139929-610oh6g9q35i2jbvqdh9rll41unrpsb8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.clipscore",
+            "certificate_hash": "1e8bc9eef8177e9ea954fc6db75777997e680866"
+          }
+        },
+        {
+          "client_id": "171143139929-1acef8s23nrlag2dkei4rqcku12evql9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrLfX9WnE2zeTfm12NNdNACcpZd5ZJjG4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "171143139929-1acef8s23nrlag2dkei4rqcku12evql9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
