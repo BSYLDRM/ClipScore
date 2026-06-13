@@ -3,12 +3,15 @@ import os
 import time
 import threading
 import traceback
+import base64
+import io
 
 import requests
 import google.generativeai as genai
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from PIL import Image
 
 load_dotenv()
 
@@ -75,12 +78,45 @@ def analyze():
         description = data.get("description", "")
         language = data.get("language", "tr")
         platform = data.get("platform", "TikTok")
+        video_frame = data.get("videoFrame", None)
 
         title_str = str(title).strip() if title is not None else ""
         desc_str = str(description).strip() if description is not None else ""
 
         if not title_str or not desc_str:
             return jsonify({"error": "Başlık ve açıklama zorunludur"}), 400
+
+        # Eğer frame varsa görsel analiz yap
+        video_content_description = ""
+        if video_frame:
+            try:
+                # Base64'ten image'a çevir
+                image_data = base64.b64decode(video_frame)
+                image = Image.open(io.BytesIO(image_data))
+
+                # Vision modeli ile içeriği tanımla
+                vision_response = model.generate_content([
+                    "Bu video karesinde ne görüyorsun? "
+                    "İçeriği 2-3 cümleyle kısaca Türkçe açıkla. "
+                    "Sadece gördüklerini yaz, yorum yapma.",
+                    image
+                ])
+                video_content_description = vision_response.text
+                print(f"Video içeriği: {video_content_description}")
+            except Exception as ve:
+                print(f"Vision analiz hatası: {ve}")
+                video_content_description = ""
+
+        # Ana prompt'a video içeriğini ekle:
+        video_context = ""
+        if video_content_description:
+            video_context = f"""
+Video İçeriği (AI tarafından otomatik analiz edildi):
+{video_content_description}
+
+Başlığın video içeriğiyle uyumunu da değerlendir ve
+contentMatchScore alanına 0-100 arası puan ver.
+"""
 
         prompt = f"""
 Sen bir viral sosyal medya içerik uzmanısın.
@@ -90,6 +126,7 @@ Platform: {platform}
 Başlık: {title_str}
 Açıklama: {desc_str}
 Dil: {language}
+{video_context}
 
 {platform} platformuna özel kriterler:
 - TikTok: trend müzik uyumu, hızlı dikkat çekme, GenZ dili
@@ -105,6 +142,8 @@ SADECE şu JSON formatında yanıt ver:
   "keywordScore": <0-100 {platform} SEO uyumu>,
   "emotionScore": <0-100 duygusal etki>,
   "ctaScore": <0-100 harekete geçirme kalitesi>,
+  "contentMatchScore": <0-100 başlık ile video içeriği uyumu, frame yoksa 0>,
+  "videoContentDescription": "{video_content_description[:100] if video_content_description else ''}",
   "hooks": ["<{platform} için hook 1>", "<hook 2>", "<hook 3>"],
   "description": "<{platform} için optimize edilmiş açıklama>",
   "hashtags": ["#{platform.lower().replace(' ', '')}tag1", "#tag2", "#tag3", "#tag4", "#tag5"]

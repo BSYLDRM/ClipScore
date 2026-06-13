@@ -10,6 +10,11 @@ import com.example.clipscore.data.model.VideoMetadata
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +32,9 @@ class VideoPickerViewModel @Inject constructor(
 
     private val _videoMetadata = MutableStateFlow<VideoMetadata?>(null)
     val videoMetadata: StateFlow<VideoMetadata?> = _videoMetadata.asStateFlow()
+
+    private val _videoFrameBase64 = MutableStateFlow<String?>(null)
+    val videoFrameBase64: StateFlow<String?> = _videoFrameBase64.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -72,6 +80,10 @@ class VideoPickerViewModel @Inject constructor(
                     } else {
                         _videoMetadata.value = metadata
                         _errorMessage.value = null
+                        // Extract frame if everything is fine
+                        viewModelScope.launch(Dispatchers.IO) {
+                            _videoFrameBase64.value = extractFrameAsBase64(context, uri)
+                        }
                     }
                 }
                 .onFailure {
@@ -97,6 +109,7 @@ class VideoPickerViewModel @Inject constructor(
     fun clearSelection() {
         _selectedVideoUri.value = null
         _videoMetadata.value = null
+        _videoFrameBase64.value = null
         _errorMessage.value = null
         _showSettingsPrompt.value = false
         _isLoading.value = false
@@ -114,5 +127,38 @@ class VideoPickerViewModel @Inject constructor(
             frameRate = metadata.frameRate,
             mimeType = metadata.mimeType,
         )
+    }
+
+    private fun extractFrameAsBase64(context: Context, videoUri: Uri): String? {
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(context, videoUri)
+
+            // 3 farklı zamandan frame al (başlangıç, orta, son)
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val duration = durationStr?.toLong() ?: 0L
+
+            val frames = listOf(
+                retriever.getFrameAtTime(1_000_000), // 1. saniye
+                retriever.getFrameAtTime(duration * 1000 / 2), // orta
+                retriever.getFrameAtTime(duration * 1000 - 2_000_000) // sona yakın
+            ).filterNotNull()
+
+            retriever.release()
+
+            // İlk geçerli frame'i kullan
+            val bitmap = frames.firstOrNull() ?: return null
+
+            // Boyutu küçült (API limitleri için)
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 512, 512, true)
+
+            // Base64'e çevir
+            val outputStream = ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+            val byteArray = outputStream.toByteArray()
+            Base64.encodeToString(byteArray, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            null
+        }
     }
 }

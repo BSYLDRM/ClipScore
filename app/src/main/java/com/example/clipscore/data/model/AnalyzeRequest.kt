@@ -4,5 +4,6 @@ data class AnalyzeRequest(
     val title: String,
     val description: String,
     val language: String = "tr",
-    val platform: String
+    val platform: String,
+    val videoFrame: String? = null
 )

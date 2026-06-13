@@ -143,6 +143,7 @@ fun NavGraph() {
                     onBack = { navController.popBackStack() },
                     onContinue = {
                         analyzeViewModel.setVideoContext(videoViewModel.getVideoContext())
+                        analyzeViewModel.setVideoFrame(videoViewModel.videoFrameBase64.value)
                         navController.navigate(Routes.Input)
                     },
                     onPickDifferent = {

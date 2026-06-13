@@ -151,12 +151,41 @@ fun ResultScreen(
                 val keywordProgress by animateFloatAsState(targetValue = data.keywordScore / 100f, label = "keywordProgress")
                 val emotionProgress by animateFloatAsState(targetValue = data.emotionScore / 100f, label = "emotionProgress")
                 val ctaProgress by animateFloatAsState(targetValue = data.ctaScore / 100f, label = "ctaProgress")
+                val matchProgress by animateFloatAsState(targetValue = data.contentMatchScore / 100f, label = "matchProgress")
 
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     ScoreCard(label = "Hook Gücü", score = data.hookScore, icon = "🎣", progress = hookProgress)
                     ScoreCard(label = "Anahtar Kelime", score = data.keywordScore, icon = "🔍", progress = keywordProgress)
                     ScoreCard(label = "Duygusal Etki", score = data.emotionScore, icon = "❤️", progress = emotionProgress)
                     ScoreCard(label = "CTA Kalitesi", score = data.ctaScore, icon = "📢", progress = ctaProgress)
+                    if (data.contentMatchScore > 0) {
+                        ScoreCard(label = "İçerik Uyumu", score = data.contentMatchScore, icon = "🎬", progress = matchProgress)
+                    }
+                }
+            }
+
+            if (data.videoContentDescription.isNotBlank()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2A)),
+                        border = BorderStroke(1.dp, Color(0xFF7C3AED))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "🤖 AI Video Analizi",
+                                color = Color(0xFF7C3AED),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = data.videoContentDescription,
+                                color = Color(0xFFCCCCCC),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
                 }
             }
 

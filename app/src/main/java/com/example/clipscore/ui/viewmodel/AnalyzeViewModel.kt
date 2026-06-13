@@ -42,9 +42,14 @@ class AnalyzeViewModel @Inject constructor(
     val uiState: StateFlow<AnalyzeUiState> = _uiState.asStateFlow()
 
     private var videoContext: VideoContext? = null
+    private var videoFrameBase64: String? = null
 
     fun setVideoContext(context: VideoContext?) {
         videoContext = context
+    }
+
+    fun setVideoFrame(base64: String?) {
+        videoFrameBase64 = base64
     }
 
     fun hasVideoContext(): Boolean = videoContext != null
@@ -57,7 +62,8 @@ class AnalyzeViewModel @Inject constructor(
                     title = title,
                     description = description,
                     language = language,
-                    platform = platform.displayName
+                    platform = platform.displayName,
+                    videoFrame = videoFrameBase64
                 )
                 _uiState.value = AnalyzeUiState.Success(response)
                 
