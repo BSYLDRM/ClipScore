@@ -154,7 +154,10 @@ fun NavGraph() {
                 )
             }
             composable(Routes.Input) {
-                val viewModel: AnalyzeViewModel = hiltViewModel()
+                val parentEntry = remember(it) {
+                    navController.getBackStackEntry(Routes.Home)
+                }
+                val viewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
                 TitleInputScreen(
                     viewModel = viewModel,
                     navController = navController,
@@ -177,7 +180,10 @@ fun NavGraph() {
                 )
             }
             composable(Routes.Result) {
-                val viewModel: AnalyzeViewModel = viewModel()
+                val parentEntry = remember(it) {
+                    navController.getBackStackEntry(Routes.Home)
+                }
+                val viewModel: AnalyzeViewModel = hiltViewModel(parentEntry)
                 ResultScreen(
                     navController = navController,
                     viewModel = viewModel,
