@@ -3,10 +3,14 @@ package com.example.clipscore.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,12 +30,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,14 +51,17 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -83,6 +93,7 @@ fun ResultScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val response = (uiState as? AnalyzeUiState.Success)?.result
+    var isVideoAnalysisExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -167,23 +178,100 @@ fun ResultScreen(
             if (data.videoContentDescription.isNotBlank()) {
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2A)),
-                        border = BorderStroke(1.dp, Color(0xFF7C3AED))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isVideoAnalysisExpanded = !isVideoAnalysisExpanded }
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            ),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isVideoAnalysisExpanded)
+                                Color(0xFF1A1A3A)
+                            else
+                                Color(0xFF12122A)
+                        ),
+                        border = BorderStroke(
+                            width = if (isVideoAnalysisExpanded) 2.dp else 1.dp,
+                            color = Color(0xFF7C3AED)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = if (isVideoAnalysisExpanded) 8.dp else 2.dp
+                        )
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = "🤖 AI Video Analizi",
-                                color = Color(0xFF7C3AED),
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = data.videoContentDescription,
-                                color = Color(0xFFCCCCCC),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "🤖",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                    Text(
+                                        text = "AI Video Analizi",
+                                        color = Color(0xFF7C3AED),
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                // Ok ikonu — açık/kapalı duruma göre döner
+                                Icon(
+                                    imageVector = if (isVideoAnalysisExpanded)
+                                        Icons.Default.KeyboardArrowUp
+                                    else
+                                        Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = Color(0xFF7C3AED),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            // Kapalıyken sadece ilk satırı göster
+                            if (!isVideoAnalysisExpanded) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = data.videoContentDescription,
+                                    color = Color(0xFF888888),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Devamını oku →",
+                                    color = Color(0xFF7C3AED),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // Açıkken tüm metni göster
+                            if (isVideoAnalysisExpanded) {
+                                Spacer(Modifier.height(10.dp))
+                                HorizontalDivider(color = Color(0xFF7C3AED).copy(alpha = 0.3f))
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    text = data.videoContentDescription,
+                                    color = Color(0xFFCCCCCC),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    lineHeight = 20.sp,
+                                    softWrap = true
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "Kapat ↑",
+                                    color = Color(0xFF7C3AED),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
