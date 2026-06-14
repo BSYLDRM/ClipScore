@@ -87,7 +87,7 @@ def analyze():
             return jsonify({"error": "Başlık ve açıklama zorunludur"}), 400
 
         # Eğer frame varsa görsel analiz yap
-        video_content_description = ""
+        video_content_description_ai = ""
         if video_frame:
             try:
                 # Base64'ten image'a çevir
@@ -97,57 +97,61 @@ def analyze():
                 # Vision modeli ile içeriği tanımla
                 vision_response = model.generate_content([
                     "Bu video karesinde ne görüyorsun? "
-                    "İçeriği 2-3 cümleyle kısaca Türkçe açıkla. "
-                    "Sadece gördüklerini yaz, yorum yapma.",
+                    "Sahneyi, nesneleri ve ortamı detaylıca Türkçe açıkla. "
+                    "Yorum yapmadan sadece gördüklerini yaz.",
                     image
                 ])
-                video_content_description = vision_response.text
-                print(f"Video içeriği: {video_content_description}")
+                video_content_description_ai = vision_response.text
             except Exception as ve:
                 print(f"Vision analiz hatası: {ve}")
-                video_content_description = ""
+                video_content_description_ai = ""
 
         # Ana prompt'a video içeriğini ekle:
         video_context = ""
-        if video_content_description:
+        if video_content_description_ai:
             video_context = f"""
-Video İçeriği (AI tarafından otomatik analiz edildi):
-{video_content_description}
-
-Başlığın video içeriğiyle uyumunu da değerlendir ve
-contentMatchScore alanına 0-100 arası puan ver.
+Görsel Analiz Verisi (AI tarafından sağlanan ham veri):
+{video_content_description_ai}
 """
 
         prompt = f"""
 Sen bir viral sosyal medya içerik uzmanısın.
-Aşağıdaki {platform} içeriğini analiz et ve SADECE JSON döndür.
+Aşağıdaki {platform} içeriğini analiz et ve SADECE geçerli bir JSON döndür. Başka hiçbir şey yazma, markdown kullanma.
 
+GİRİŞ VERİLERİ:
 Platform: {platform}
-Başlık: {title_str}
-Açıklama: {desc_str}
-Dil: {language}
+Kullanıcı Başlığı: {title_str}
+Kullanıcı Açıklaması: {desc_str}
+Hedef Dil: {language}
 {video_context}
 
-{platform} platformuna özel kriterler:
-- TikTok: trend müzik uyumu, hızlı dikkat çekme, GenZ dili
-- Instagram Reels: görsel estetik, hikaye anlatımı, topluluk etkileşimi
-- YouTube Shorts: thumbnail etkisi, arama optimizasyonu, izlenme süresi
-- YouTube: SEO anahtar kelimeler, izlenme süresi, abonelik çağrısı
-- X (Twitter): özlü mesaj, tartışma yaratma, retweet potansiyeli
+ANALİZ KRİTERLERİ ({platform} özelinde):
+- TikTok: trend müzik uyumu, hızlı dikkat çekme, GenZ dili.
+- Instagram Reels: görsel estetik, hikaye anlatımı, topluluk etkileşimi.
+- YouTube Shorts: thumbnail etkisi, arama optimizasyonu, izlenme süresi.
+- YouTube: SEO anahtar kelimeler, izlenme süresi, abonelik çağrısı.
+- X (Twitter): özlü mesaj, tartışma yaratma, retweet potansiyeli.
 
-SADECE şu JSON formatında yanıt ver:
+YANIT FORMATI (JSON):
 {{
-  "vibeScore": <0-100 {platform} için viral potansiyel>,
-  "hookScore": <0-100 ilk 3 saniye dikkat çekicilik>,
-  "keywordScore": <0-100 {platform} SEO uyumu>,
-  "emotionScore": <0-100 duygusal etki>,
-  "ctaScore": <0-100 harekete geçirme kalitesi>,
-  "contentMatchScore": <0-100 başlık ile video içeriği uyumu, frame yoksa 0>,
-  "videoContentDescription": "{video_content_description[:100] if video_content_description else ''}",
-  "hooks": ["<{platform} için hook 1>", "<hook 2>", "<hook 3>"],
-  "description": "<{platform} için optimize edilmiş açıklama>",
-  "hashtags": ["#{platform.lower().replace(' ', '')}tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
+  "videoContentDescription": "AI görsel verisini ve kullanıcı verilerini harmanlayarak sahneyi, ortamı ve atmosferi DETAYLI anlat. Minimum 3, maksimum 8 tam cümle olmalı. Asla yarım bırakma.",
+  "hookScore": <0-100 tam sayı>,
+  "keywordScore": <0-100 tam sayı>,
+  "emotionScore": <0-100 tam sayı>,
+  "ctaScore": <0-100 tam sayı>,
+  "contentMatchScore": <0-100 tam sayı (başlık ile video uyumu)>,
+  "vibeScore": <0-100 tam sayı (genel viral skor)>,
+  "hooks": ["En az 3, en fazla 5 adet etkileyici hook yaz"],
+  "description": "SEO optimizeli, platforma uygun açıklama metni",
+  "hashtags": ["En az 10, en fazla 20 adet popüler hashtag"]
 }}
+
+KURALLAR:
+1. SADECE ham JSON döndür.
+2. videoContentDescription her zaman tam ve bütün cümlelerle bitmelidir.
+3. Tüm skorlar sayısal olmalıdır.
+4. hooks dizisi 3-5 elemanlı olmalıdır.
+5. hashtags dizisi 10-20 elemanlı olmalıdır.
 """
 
         # Gemini API call
