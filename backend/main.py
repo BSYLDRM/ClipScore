@@ -96,9 +96,7 @@ def analyze():
 
                 # Vision modeli ile içeriği tanımla
                 vision_response = model.generate_content([
-                    "Bu video karesinde ne görüyorsun? "
-                    "Sahneyi, nesneleri ve ortamı detaylıca Türkçe açıkla. "
-                    "Yorum yapmadan sadece gördüklerini yaz.",
+                    "Bu video karesinde ne görüyorsun? Maksimum 2 cümleyle kısaca özetle. Sadece en önemli nesne ve ortamı belirt.",
                     image
                 ])
                 video_content_description_ai = vision_response.text
@@ -134,7 +132,7 @@ ANALİZ KRİTERLERİ ({platform} özelinde):
 
 YANIT FORMATI (JSON):
 {{
-  "videoContentDescription": "AI görsel verisini ve kullanıcı verilerini harmanlayarak sahneyi, ortamı ve atmosferi DETAYLI anlat. Minimum 3, maksimum 8 tam cümle olmalı. Asla yarım bırakma.",
+  "videoContentDescription": "Sahneyi 1-2 cümleyle kısaca özetle.",
   "hookScore": <0-100 tam sayı>,
   "keywordScore": <0-100 tam sayı>,
   "emotionScore": <0-100 tam sayı>,
@@ -160,10 +158,6 @@ KURALLAR:
 
         cleaned = _strip_markdown_fences(raw_text)
         result = json.loads(cleaned)
-
-        # Vision metni varsa direkt yaz, Gemini'nin kısaltmasına izin verme
-        if video_content_description_ai:
-            result["videoContentDescription"] = video_content_description_ai
 
         return jsonify(result), 200
 
