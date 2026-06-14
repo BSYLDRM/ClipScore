@@ -160,6 +160,11 @@ KURALLAR:
 
         cleaned = _strip_markdown_fences(raw_text)
         result = json.loads(cleaned)
+
+        # Vision metni varsa direkt yaz, Gemini'nin kısaltmasına izin verme
+        if video_content_description_ai:
+            result["videoContentDescription"] = video_content_description_ai
+
         return jsonify(result), 200
 
     except Exception as e:
