@@ -139,7 +139,7 @@ YANIT FORMATI (JSON):
   "ctaScore": <0-100 tam sayı>,
   "contentMatchScore": <0-100 tam sayı (başlık ile video uyumu)>,
   "vibeScore": <0-100 tam sayı (genel viral skor)>,
-  "hooks": ["En az 3, en fazla 5 adet etkileyici hook yaz"],
+  "hooks": ["Tam olarak 3 adet etkileyici hook yaz"],
   "description": "SEO optimizeli, platforma uygun açıklama metni",
   "hashtags": ["En az 10, en fazla 20 adet popüler hashtag"]
 }}
@@ -148,7 +148,7 @@ KURALLAR:
 1. SADECE ham JSON döndür.
 2. videoContentDescription her zaman tam ve bütün cümlelerle bitmelidir.
 3. Tüm skorlar sayısal olmalıdır.
-4. hooks dizisi 3-5 elemanlı olmalıdır.
+4. hooks dizisi tam olarak 3 elemanlı olmalıdır.
 5. hashtags dizisi 10-20 elemanlı olmalıdır.
 """
 

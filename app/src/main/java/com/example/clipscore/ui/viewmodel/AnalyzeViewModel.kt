@@ -112,6 +112,8 @@ class AnalyzeViewModel @Inject constructor(
 
     fun resetState() {
         _uiState.value = AnalyzeUiState.Idle
+        videoContext = null
+        videoFrameBase64 = null
     }
 
     private fun buildEnrichedDescription(description: String, video: VideoContext?): String {

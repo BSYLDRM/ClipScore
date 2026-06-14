@@ -99,7 +99,7 @@ fun VideoPreviewScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
+                            contentDescription = "Geri",
                             tint = BrandText,
                         )
                     }

@@ -326,9 +326,8 @@ fun ResultScreen(
                 Button(
                     onClick = {
                         viewModel.resetState()
-                        navController.navigate("title_input") {
-                            popUpTo(0) { inclusive = true }
-                            launchSingleTop = true
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = true }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
