@@ -108,10 +108,6 @@ Video yükle → Platform seç → AI viral potansiyelini 0-100 arası puanlar �
       <img src="prodocs/screenshots/Screenshot_20260613_164328.png" width="200"/>
       <br/><b>Detay + AI Video Analizi</b>
     </td>
-    <td align="center">
-      <img src="prodocs/screenshots/Screenshot_20260613_124540.png" width="200"/>
-      <br/><b>Hook & SEO Önerileri</b>
-    </td>
   </tr>
 </table>
 </div>
