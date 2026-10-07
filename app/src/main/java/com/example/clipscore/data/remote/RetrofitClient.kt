@@ -9,7 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "https://clipscore-dmmb.onrender.com/"
+    private val BASE_URL = BuildConfig.BACKEND_URL
 
     private val gson: Gson = GsonBuilder().create()
 

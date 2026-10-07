@@ -164,7 +164,7 @@ KURALLAR:
     except Exception as e:
         print(f"HATA: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Analiz sırasında bir hata oluştu. Lütfen tekrar deneyin."}), 500
 
 
 def keep_alive():
