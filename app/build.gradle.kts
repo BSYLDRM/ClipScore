@@ -17,7 +17,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.clipscore"
+        applicationId = "com.buseyildirim.clipscore"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
@@ -32,7 +32,7 @@ android {
         }
         val backendUrl = localProperties.getProperty(
             "BACKEND_URL",
-            "https://clipscore-ph79.onrender.com/",
+            "https://clipscore-dmmb.onrender.com/",
         )
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
