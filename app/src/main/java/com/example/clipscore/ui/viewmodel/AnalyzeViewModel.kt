@@ -72,6 +72,10 @@ class AnalyzeViewModel @Inject constructor(
                 
             } catch (e: Exception) {
                 val message = when {
+                    e.message?.contains("401") == true ->
+                        "Oturumun doğrulanamadı. Lütfen çıkış yapıp tekrar giriş yap."
+                    e.message?.contains("429") == true ->
+                        "Çok fazla istek gönderdin. Lütfen bir dakika bekle."
                     e.message?.contains("502") == true ||
                             e.message?.contains("503") == true ->
                         "Sunucu şu an meşgul, lütfen birkaç saniye bekleyip tekrar deneyin."

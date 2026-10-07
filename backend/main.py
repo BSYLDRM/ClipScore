@@ -6,8 +6,10 @@ import traceback
 import base64
 import io
 
+import firebase_admin
 import requests
 import google.generativeai as genai
+from firebase_admin import auth as firebase_auth
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -22,19 +24,40 @@ CORS(app, origins=["*"])
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
+# Firebase ID token doğrulaması. Token doğrulamak için servis hesabı gerekmez, proje ID yeterli.
+firebase_admin.initialize_app(
+    options={"projectId": os.environ.get("FIREBASE_PROJECT_ID", "clipscore-b2708")}
+)
+# REQUIRE_AUTH=true olduğunda token'sız istekler reddedilir. Eski uygulama sürümleri
+# token göndermediği için yeni sürüm yayılana kadar kapalı tutulabilir.
+REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "false").lower() == "true"
+
 request_counts = {}
 
 
-def check_rate_limit(ip):
+def get_user_id():
+    """Geçerli bir Bearer token varsa Firebase uid döndürür, yoksa None."""
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        return None
+    try:
+        decoded = firebase_auth.verify_id_token(header[len("Bearer "):])
+        return decoded["uid"]
+    except Exception as e:
+        print(f"Token doğrulama hatası: {e}")
+        return None
+
+
+def check_rate_limit(key):
     now = time.time()
     cutoff = now - 60
-    timestamps = request_counts.get(ip, [])
+    timestamps = request_counts.get(key, [])
     timestamps = [t for t in timestamps if t > cutoff]
     if len(timestamps) >= 10:
-        request_counts[ip] = timestamps
+        request_counts[key] = timestamps
         return False
     timestamps.append(now)
-    request_counts[ip] = timestamps
+    request_counts[key] = timestamps
     return True
 
 
@@ -62,8 +85,12 @@ def _strip_markdown_fences(text):
 
 @app.post("/api/analyze")
 def analyze():
-    ip = request.remote_addr
-    if not check_rate_limit(ip):
+    uid = get_user_id()
+    if uid is None and REQUIRE_AUTH:
+        return jsonify({"error": "Oturum doğrulanamadı. Lütfen tekrar giriş yapın."}), 401
+
+    rate_key = f"uid:{uid}" if uid else f"ip:{request.remote_addr}"
+    if not check_rate_limit(rate_key):
         return (
             jsonify({"error": "Çok fazla istek. Lütfen bir dakika bekleyin."}),
             429,

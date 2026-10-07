@@ -1,6 +1,8 @@
 package com.example.clipscore.data.remote
 
 import com.example.clipscore.BuildConfig
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
@@ -18,7 +20,15 @@ object RetrofitClient {
         .readTimeout(90, TimeUnit.SECONDS)
         .writeTimeout(90, TimeUnit.SECONDS)
         .addInterceptor { chain ->
-            val request = chain.request()
+            // Backend Firebase ID token ile kimlik doğruluyor
+            val token = FirebaseAuth.getInstance().currentUser?.let { user ->
+                runCatching { Tasks.await(user.getIdToken(false), 15, TimeUnit.SECONDS).token }.getOrNull()
+            }
+            val request = if (token != null) {
+                chain.request().newBuilder().header("Authorization", "Bearer $token").build()
+            } else {
+                chain.request()
+            }
             var response = chain.proceed(request)
             var tryCount = 0
             // 502 veya 503 alınca 2 kez daha dene
