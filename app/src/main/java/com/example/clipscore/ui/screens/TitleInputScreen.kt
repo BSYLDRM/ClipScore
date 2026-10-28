@@ -241,7 +241,7 @@ fun TitleInputScreen(
                         language = language
                     )
                 },
-                enabled = uiState !is AnalyzeUiState.Loading && titleText.isNotBlank(),
+                enabled = uiState !is AnalyzeUiState.Loading && titleText.isNotBlank() && descriptionText.isNotBlank(),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary)
