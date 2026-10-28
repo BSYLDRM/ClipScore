@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "171143139929-rgnli4qa715frqabc2klg71e0vm2jpk0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.buseyildirim.clipscore",
+            "certificate_hash": "9278b950980b4e573e2490ae65a2fa692c39269a"
+          }
+        },
+        {
           "client_id": "171143139929-rk5qm6ud6t92hrhc6jv4f977tusre5n7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
