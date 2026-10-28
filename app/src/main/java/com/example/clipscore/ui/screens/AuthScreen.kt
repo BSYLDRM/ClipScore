@@ -59,6 +59,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import com.example.clipscore.util.PRIVACY_URL
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -442,8 +444,9 @@ private fun SignupTab(
                 enabled = !isLoading
             )
             Spacer(modifier = Modifier.width(10.dp))
+            val uriHandler = LocalUriHandler.current
             TermsText(
-                onTermsClick = { },
+                onTermsClick = { uriHandler.openUri(PRIVACY_URL) },
             )
         }
 
@@ -472,8 +475,8 @@ private fun TermsText(
 ) {
     val annotated = remember {
         buildAnnotatedString {
-            val prefix = "Kullanım "
-            val link = "koşullarını"
+            val prefix = ""
+            val link = "Kullanım koşullarını ve gizlilik politikasını"
             val suffix = " kabul ediyorum"
 
             append(prefix)

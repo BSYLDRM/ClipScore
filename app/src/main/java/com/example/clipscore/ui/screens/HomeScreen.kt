@@ -40,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import com.example.clipscore.util.PRIVACY_URL
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,6 +78,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val authPreferences = remember { AuthPreferences(context) }
     val recentAnalyses by viewModel.recentAnalyses.collectAsStateWithLifecycle(initialValue = emptyList())
+    val uriHandler = LocalUriHandler.current
     var menuExpanded by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
@@ -143,6 +146,13 @@ fun HomeScreen(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false },
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("Gizlilik politikası") },
+                                onClick = {
+                                    menuExpanded = false
+                                    uriHandler.openUri(PRIVACY_URL)
+                                },
+                            )
                             DropdownMenuItem(
                                 text = { Text("Çıkış yap") },
                                 onClick = {
