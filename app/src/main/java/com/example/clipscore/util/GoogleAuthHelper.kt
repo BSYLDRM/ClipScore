@@ -77,6 +77,23 @@ class GoogleAuthHelper(private val context: Context) {
         }
     }
 
+    // Hesabı Firebase'den siler; yakın zamanda giriş yapılmadıysa
+    // FirebaseAuthRecentLoginRequiredException döner
+    suspend fun deleteAccount(): Result<Unit> {
+        val user = auth.currentUser ?: return Result.failure(IllegalStateException("Oturum yok"))
+        return try {
+            user.delete().await()
+            try {
+                getGoogleSignInClient().revokeAccess().await()
+            } catch (_: Exception) {
+                // E-posta ile giriş yapan kullanıcıda Google oturumu olmayabilir
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun logout() {
         auth.signOut()
         getGoogleSignInClient().signOut()
