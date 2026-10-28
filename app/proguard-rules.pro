@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# Backend JSON modelleri Gson ile alan adlarından eşlenir; R8 isimlerini değiştirmemeli
+-keep class com.example.clipscore.data.model.** { *; }
+
+# Satır numaralı çökme raporları için
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

@@ -16,6 +16,9 @@ interface AnalysisDao {
     @Query("DELETE FROM analyses WHERE userEmail = :userEmail AND id NOT IN (SELECT id FROM analyses WHERE userEmail = :userEmail ORDER BY createdAt DESC LIMIT 10)")
     suspend fun keepOnlyLast10(userEmail: String)
 
+    @Query("DELETE FROM analyses WHERE userEmail = :userEmail")
+    suspend fun deleteAllForUser(userEmail: String)
+
     @Query("SELECT * FROM analyses WHERE id = :id")
     suspend fun getAnalysisById(id: Int): AnalysisEntity?
 }

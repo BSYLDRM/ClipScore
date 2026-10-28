@@ -16,24 +16,32 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import com.example.clipscore.util.PRIVACY_URL
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,6 +60,7 @@ import com.example.clipscore.data.model.Platform
 import com.example.clipscore.ui.viewmodel.AuthViewModel
 import com.example.clipscore.ui.viewmodel.HomeViewModel
 import com.example.clipscore.util.AuthPreferences
+import android.widget.Toast
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,6 +78,50 @@ fun HomeScreen(
     val context = LocalContext.current
     val authPreferences = remember { AuthPreferences(context) }
     val recentAnalyses by viewModel.recentAnalyses.collectAsStateWithLifecycle(initialValue = emptyList())
+    val uriHandler = LocalUriHandler.current
+    var menuExpanded by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) showDeleteDialog = false },
+            title = { Text("Hesabını sil") },
+            text = {
+                Text(
+                    "Hesabın ve bu cihazdaki analiz geçmişin kalıcı olarak silinecek. " +
+                        "Bu işlem geri alınamaz.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !isDeleting,
+                    onClick = {
+                        isDeleting = true
+                        authViewModel.deleteAccount { error ->
+                            isDeleting = false
+                            showDeleteDialog = false
+                            Toast.makeText(
+                                context,
+                                error ?: "Hesabın silindi.",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                            if (error == null || !authViewModel.isLoggedIn) {
+                                onLogout()
+                            }
+                        }
+                    },
+                ) {
+                    Text(if (isDeleting) "Siliniyor..." else "Sil", color = Color(0xFFEF4444))
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !isDeleting, onClick = { showDeleteDialog = false }) {
+                    Text("Vazgeç")
+                }
+            },
+        )
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -85,12 +138,38 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = {
-                        authViewModel.logout()
-                        authPreferences.clearSession()
-                        onLogout()
-                    }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Çıkış Yap", tint = BrandText)
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menü", tint = BrandText)
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Gizlilik politikası") },
+                                onClick = {
+                                    menuExpanded = false
+                                    uriHandler.openUri(PRIVACY_URL)
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Çıkış yap") },
+                                onClick = {
+                                    menuExpanded = false
+                                    authViewModel.logout()
+                                    authPreferences.clearSession()
+                                    onLogout()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Hesabımı sil", color = Color(0xFFEF4444)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    showDeleteDialog = true
+                                },
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

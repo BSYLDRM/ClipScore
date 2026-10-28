@@ -13,12 +13,14 @@ import com.example.clipscore.data.model.AnalyzeResponse
 import com.example.clipscore.data.repository.AnalyzeRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import javax.inject.Inject
 
 sealed class AnalyzeUiState {
@@ -84,10 +86,25 @@ class AnalyzeViewModel @Inject constructor(
                         "Bağlantı zaman aşımına uğradı. Sunucu uyanıyor olabilir, tekrar deneyin."
                     e.message?.contains("Unable to resolve host") == true ->
                         "İnternet bağlantısı yok. Lütfen bağlantını kontrol et."
-                    else -> "Bir hata oluştu: ${e.message}"
+                    else -> serverErrorMessage(e) ?: "Bir hata oluştu. Lütfen tekrar deneyin."
                 }
                 _uiState.value = AnalyzeUiState.Error(message)
             }
+        }
+    }
+
+    // Backend hata gövdesindeki {"error": "..."} mesajını okur
+    private fun serverErrorMessage(e: Exception): String? {
+        if (e !is HttpException) return null
+        return try {
+            val body = e.response()?.errorBody()?.string() ?: return null
+            gson.fromJson(body, JsonObject::class.java)
+                ?.get("error")
+                ?.takeIf { it.isJsonPrimitive }
+                ?.asString
+                ?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
         }
     }
 

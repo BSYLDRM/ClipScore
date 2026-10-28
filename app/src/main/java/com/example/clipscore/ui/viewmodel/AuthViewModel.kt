@@ -3,8 +3,12 @@ package com.example.clipscore.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import com.example.clipscore.data.local.AnalysisDao
+import com.example.clipscore.util.AuthPreferences
 import com.example.clipscore.util.GoogleAuthHelper
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +25,8 @@ sealed class AuthUiState {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    application: Application
+    application: Application,
+    private val analysisDao: AnalysisDao,
 ) : AndroidViewModel(application) {
 
     val googleAuthHelper = GoogleAuthHelper(application)
@@ -76,6 +81,35 @@ class AuthViewModel @Inject constructor(
     }
 
     fun logout() {
+        googleAuthHelper.logout()
+    }
+
+    /** Hesabı ve cihazdaki verilerini siler. Hata varsa kullanıcıya gösterilecek mesajı döner. */
+    fun deleteAccount(onResult: (String?) -> Unit) {
+        val email = auth.currentUser?.email ?: ""
+        viewModelScope.launch {
+            val result = googleAuthHelper.deleteAccount()
+            val error = result.exceptionOrNull()
+            if (error == null) {
+                clearLocalData(email)
+                onResult(null)
+            } else if (error is FirebaseAuthRecentLoginRequiredException) {
+                // Firebase yeni giriş istiyor: çıkış yapıp kullanıcıdan tekrar giriş yapmasını iste
+                googleAuthHelper.logout()
+                AuthPreferences(getApplication()).clearSession()
+                onResult("Güvenliğin için tekrar giriş yapıp hesabı silmeyi yeniden dene.")
+            } else {
+                onResult("Hesap silinemedi. İnternet bağlantını kontrol edip tekrar dene.")
+            }
+        }
+    }
+
+    private suspend fun clearLocalData(email: String) {
+        analysisDao.deleteAllForUser(email)
+        getApplication<Application>()
+            .getSharedPreferences(AnalyzeViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().clear().apply()
+        AuthPreferences(getApplication()).clearSession()
         googleAuthHelper.logout()
     }
 
