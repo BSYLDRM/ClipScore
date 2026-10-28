@@ -42,9 +42,6 @@ class VideoPickerViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    private val _showSettingsPrompt = MutableStateFlow(false)
-    val showSettingsPrompt: StateFlow<Boolean> = _showSettingsPrompt.asStateFlow()
-
     val isFileTooLarge: Boolean
         get() = (_videoMetadata.value?.fileSizeBytes ?: 0L) > VideoMetadataExtractor.MAX_FILE_SIZE_BYTES
 
@@ -96,14 +93,8 @@ class VideoPickerViewModel @Inject constructor(
         }
     }
 
-    fun onPermissionDenied() {
-        _errorMessage.value = context.getString(R.string.error_permission_required)
-        _showSettingsPrompt.value = true
-    }
-
     fun clearError() {
         _errorMessage.value = null
-        _showSettingsPrompt.value = false
     }
 
     fun clearSelection() {
@@ -111,7 +102,6 @@ class VideoPickerViewModel @Inject constructor(
         _videoMetadata.value = null
         _videoFrameBase64.value = null
         _errorMessage.value = null
-        _showSettingsPrompt.value = false
         _isLoading.value = false
     }
 
